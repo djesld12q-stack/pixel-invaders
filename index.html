@@ -287,6 +287,33 @@ body::after{
 .coin{position:fixed;font-size:22px;pointer-events:none;z-index:8100;animation:cd var(--d) linear forwards;}
 @keyframes cd{0%{transform:translateY(-80px) rotate(0deg);opacity:1}100%{transform:translateY(110vh) rotate(var(--r));opacity:0}}
 
+/* ── TWITCH AUTH OVERLAY ── */
+#authOverlay{
+  position:fixed;inset:0;z-index:10000;
+  background:rgba(0,0,0,.97);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:18px;
+}
+#authOverlay.hidden{display:none;}
+.auth-logo{font-size:64px;}
+.auth-title{
+  font-family:'Bebas Neue',sans-serif;font-size:38px;letter-spacing:.2em;
+  color:var(--gold);text-shadow:0 0 20px rgba(255,215,0,.6);
+}
+.auth-sub{font-size:13px;letter-spacing:.1em;color:var(--dim);text-align:center;max-width:360px;line-height:1.7;}
+.auth-btn{
+  margin-top:10px;
+  background:#9147ff;border:none;border-radius:8px;
+  padding:14px 40px;cursor:pointer;
+  font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:.12em;color:#fff;
+  box-shadow:0 4px 24px rgba(145,71,255,.5);
+  transition:transform .1s,box-shadow .15s;
+}
+.auth-btn:hover{transform:translateY(-2px);box-shadow:0 8px 32px rgba(145,71,255,.7);}
+.auth-btn:active{transform:translateY(1px);}
+.auth-scopes{font-size:10px;color:#3a3030;letter-spacing:.1em;text-align:center;}
+#authOk{font-size:13px;color:var(--green);letter-spacing:.1em;display:none;}
+
 /* debug panel */
 #dbg{
   position:fixed;bottom:8px;right:8px;
@@ -298,6 +325,16 @@ body::after{
 </style>
 </head>
 <body>
+
+<!-- TWITCH AUTH OVERLAY -->
+<div id="authOverlay">
+  <div class="auth-logo">🎰</div>
+  <div class="auth-title">STREAM SLOTS</div>
+  <div class="auth-sub">Для роботи потрібна авторизація через Twitch.</div>
+  <button class="auth-btn" id="authBtn" onclick="startTwitchAuth()">🟣 УВІЙТИ ЧЕРЕЗ TWITCH</button>
+  <div class="auth-scopes">Права: chat:read · chat:edit · channel:moderate</div>
+  <div id="authOk">✅ Авторизовано! Підключення до Streamer.bot...</div>
+</div>
 
 <div id="jkov" onclick="closeJK()">
   <span class="ji">🎰</span>
@@ -382,7 +419,81 @@ body::after{
 
 <script>
 /* ══════════════════════════════════════════════
-   CONFIG
+   TWITCH OAuth — Implicit Flow через редірект
+   ─────────────────────────────────────────────
+   Flow:
+   1. Клік → редірект на id.twitch.tv
+   2. Twitch → редірект на callback (twitch-auth)
+   3. Callback зберігає токен в localStorage
+   4. Callback робить редірект назад сюди
+   5. Тут читаємо токен з localStorage → connect()
+
+   Обидві сторінки на github.io — shared localStorage!
+══════════════════════════════════════════════ */
+const TWITCH_CLIENT_ID = 'YOUR_CLIENT_ID'; // ← замінити!
+const TWITCH_CALLBACK  = 'https://djesld12q-stack.github.io/twitch-auth/';
+const TWITCH_SCOPES    = 'chat:read chat:edit channel:moderate';
+const SLOTS_URL        = window.location.href.split('?')[0].split('#')[0];
+
+// Ключі в localStorage
+const LS_TOKEN = 'twitch_token';
+const LS_LOGIN = 'twitch_login';
+
+function startTwitchAuth() {
+  const url = new URL('https://id.twitch.tv/oauth2/authorize');
+  url.searchParams.set('client_id',     TWITCH_CLIENT_ID);
+  url.searchParams.set('redirect_uri',  TWITCH_CALLBACK);
+  url.searchParams.set('response_type', 'token');
+  url.searchParams.set('scope',         TWITCH_SCOPES);
+  url.searchParams.set('force_verify',  'false');
+  // Зберігаємо куди повернутись після авторизації
+  localStorage.setItem('twitch_return_to', SLOTS_URL);
+  window.location.href = url.toString();
+}
+
+async function validateToken(token) {
+  try {
+    const r = await fetch('https://id.twitch.tv/oauth2/validate', {
+      headers: { 'Authorization': 'OAuth ' + token }
+    });
+    if (!r.ok) return null;
+    return await r.json();
+  } catch { return null; }
+}
+
+function onAuthSuccess(token, login) {
+  CFG.twitchToken = token;
+  CFG.twitchLogin = login;
+  document.getElementById('authOk').style.display = 'block';
+  setTimeout(() => {
+    document.getElementById('authOverlay').classList.add('hidden');
+    connect();
+  }, 800);
+  log(`🟣 Авторизовано як ${login}`);
+  dbg(`AUTH OK: ${login} | token: ${token.slice(0,10)}...`);
+}
+
+async function initAuth() {
+  // Перевіряємо збережений токен
+  const savedToken = localStorage.getItem(LS_TOKEN);
+  const savedLogin = localStorage.getItem(LS_LOGIN);
+
+  if (savedToken) {
+    const info = await validateToken(savedToken);
+    if (info) {
+      onAuthSuccess(savedToken, info.login || savedLogin);
+      return;
+    }
+    // Токен протух — чистимо
+    localStorage.removeItem(LS_TOKEN);
+    localStorage.removeItem(LS_LOGIN);
+  }
+
+  // Показуємо overlay авторизації
+  document.getElementById('authOverlay').classList.remove('hidden');
+}
+
+/* ══════════════════════════════════════════════
 ══════════════════════════════════════════════ */
 const CFG = {
   host:       '127.0.0.1',
@@ -745,6 +856,17 @@ function handleMsg(d){
     return;
   }
 
+  // ══ BALANCE UPDATE від C# скрипта ══
+  if(evType==='BalanceUpdate' || data?.command==='balance_update'){
+    const user    = data?.user    || '';
+    const balance = parseInt(data?.balance) || 0;
+    const spins   = parseInt(data?.spins)   || 0;
+    const wins    = parseInt(data?.wins)    || 0;
+    dbg(`BALANCE UPDATE: ${user} → ${balance}pt (${spins} спінів, ${wins} виграшів)`);
+    applyBalanceUpdate(user, balance, spins, wins);
+    return;
+  }
+
   // ══ GENERAL CUSTOM EVENT (від SB Action) ══
   if(evType==='Custom'||evSrc==='Slots'){
     const cmd  = data?.command || '';
@@ -778,10 +900,36 @@ function parseCmd(msg, user){
 }
 
 function routeCmd(cmd,user,arg){
-  if(cmd==='spin')    doSpin(user,parseInt(arg)||CFG.basePrice);
-  if(cmd==='balance') showBal(user);
-  if(cmd==='jackpot') trigJK(user);
-  if(cmd==='reset')   resetAll();
+  if(cmd==='spin')           doSpin(user,parseInt(arg)||CFG.basePrice);
+  if(cmd==='balance')        showBal(user);
+  if(cmd==='balance_update') applyBalanceUpdate(user, parseInt(arg)||getBal(user), 0, 0);
+  if(cmd==='jackpot')        trigJK(user);
+  if(cmd==='reset')          resetAll();
+}
+
+/* ══════════════════════════════════════════════
+   BALANCE UPDATE від C# скрипта Streamer.bot
+   Синхронізує баланс, спіни та виграші з бази SB
+══════════════════════════════════════════════ */
+function applyBalanceUpdate(user, balance, spins, wins){
+  if(!user) return;
+
+  // Оновлюємо локальний баланс у HTML
+  setBal(user, balance);
+
+  // Оновлюємо per-user статистику
+  const st = getUserST(user);
+  if(spins > st.spins) st.spins = spins;
+  if(wins  > st.wins ) st.wins  = wins;
+
+  // Якщо це поточний гравець — оновити UI
+  const curUser = document.getElementById('pUser').textContent;
+  if(curUser === user.slice(0,14) || curUser === '\u2014'){
+    document.getElementById('pBal').textContent = balance.toLocaleString();
+  }
+
+  log('\uD83D\uDD04 Баланс синхронізовано: ' + user + ' = ' + balance.toLocaleString() + 'pt');
+  dbg('applyBalanceUpdate: ' + user + ' bal=' + balance + ' spins=' + spins + ' wins=' + wins);
 }
 
 function showBal(user){
@@ -823,6 +971,12 @@ function sbChat(message){
 function sbSend(payload){
   if(!wsOk||!ws||ws.readyState!==1)return;
   try{
+    // Додаємо per-user статистику щоб C# міг зберегти в Streamer.bot UserVars
+    if(payload.user){
+      const st = getUserST(payload.user);
+      payload.spins = st.spins;
+      payload.wins  = st.wins;
+    }
     ws.send(JSON.stringify({
       request: 'DoAction',
       action:  { name: 'game' },
@@ -868,7 +1022,8 @@ function buildPT(){
   document.getElementById('caddr').textContent=`ws://${CFG.host}:${CFG.port}`;
   initReels();
   buildPT();
-  connect();
+  document.getElementById('authOverlay').classList.add('hidden');
+  initAuth(); // connect() викликається після авторизації всередині onAuthSuccess
   log('🎰 Stream Slots готовий!  Команди: !spin · !spin [ставка] · !balance');
 })();
 </script>
