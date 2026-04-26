@@ -894,22 +894,15 @@ function doPlay(){
   const ov = document.getElementById('quitOverlay');
   if(ov){ ov.style.opacity='0'; setTimeout(()=>ov.remove(),1500); return; }
 
-  // Якщо не авторизований — запустити OAuth
+  // Якщо не авторизований — симулюємо клік на кнопку авторизації
   if(!CFG.twitchToken){
-    // Зберігаємо куди повернутись
-    localStorage.setItem('twitch_return_to', window.location.href);
-    // Будуємо OAuth URL
-    const url = new URL('https://id.twitch.tv/oauth2/authorize');
-    url.searchParams.set('client_id',     TWITCH_CLIENT_ID);
-    url.searchParams.set('redirect_uri',  TWITCH_CALLBACK);
-    url.searchParams.set('response_type', 'token');
-    url.searchParams.set('scope',         TWITCH_SCOPES);
-    url.searchParams.set('force_verify',  'false');
-    window.location.href = url.toString();
+    document.getElementById('authOverlay').classList.remove('hidden');
+    // Невелика затримка щоб overlay встиг показатись
+    setTimeout(()=> startTwitchAuth(), 300);
     return;
   }
 
-  // Вже авторизований — просто показуємо overlay авторизації прихованим
+  // Вже авторизований — просто ховаємо overlay
   document.getElementById('authOverlay').classList.add('hidden');
   log('▶️ Гра активна!');
 }
