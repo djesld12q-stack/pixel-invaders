@@ -152,12 +152,12 @@
       <div id="sbInput">
         <input id="sbHost" value="ws://127.0.0.1" placeholder="Host" />
         <input id="sbPort" value="8080" placeholder="Port" />
-        <button id="sbConnBtn" onclick="connectSB()">▶ Connect</button>
       </div>
       <div id="sbStatus" style="margin-top:8px;">
         <div class="dot" id="sbDot"></div>
-        <span id="sbStatusText" style="font-size:10px;">Offline</span>
+        <span id="sbStatusText" style="font-size:10px;">Підключення...</span>
       </div>
+      <div style="font-size:10px;color:#223344;margin-top:4px;">авто-підключення при старті</div>
       <div id="sbLog"></div>
     </div>
 
@@ -169,6 +169,7 @@
     <div class="panel">
       <div class="panel-title">Команди чату</div>
       <div id="cmdList">
+        <b>!play</b> <em>— старт гри</em><br>
         <b>!left</b> <em>— рух вліво</em><br>
         <b>!right</b> <em>— рух вправо</em><br>
         <b>!shoot</b> <em>— вогонь!</em><br>
@@ -286,86 +287,118 @@ function handleChatCommand(username, message) {
   const msg = message.toLowerCase().trim();
   addChatLine(username, message, true);
 
-  if (state !== 'play') return;
+  // !play — стартує або рестартує гру з будь-якого стану
+  if (msg === '!play') {
+    initGame(); state = 'play'; enemyDir = 1;
+    addLog('>> '+username+' запустив гру!', 'ok');
+    return;
+  }
 
-  if (msg === '!left')  { player.x = Math.max(0, player.x - 40); addLog('← '+username+' рух вліво','cmd'); }
-  else if (msg === '!right') { player.x = Math.min(W-player.w, player.x + 40); addLog('→ '+username+' рух вправо','cmd'); }
+  if (state !== 'play') {
+    addLog('-- гра не активна. Напиши !play', 'inf');
+    return;
+  }
+
+  if (msg === '!left')  { player.x = Math.max(0, player.x - 48); addLog('<- '+username+' вліво','cmd'); }
+  else if (msg === '!right') { player.x = Math.min(W-player.w, player.x + 48); addLog('-> '+username+' вправо','cmd'); }
   else if (msg === '!shoot') {
     bullets.push({ x:player.x+7, y:player.y-8, vy:-7, player:true });
-    addLog('🔥 '+username+' вогонь!','cmd');
+    addLog('** '+username+' вогонь!','cmd');
   }
   else if (msg === '!boss') {
     enemies.push({ x:Math.random()*(W-20)+10, y:60, w:14, h:12, t:'boss', hp:5, alive:true, anim:0 });
-    addLog('👾 '+username+' викликав боса!','cmd');
+    addLog('!! '+username+' спавн боса','cmd');
   }
   else if (msg === '!heal') {
     lives = Math.min(lives+1, 5);
-    addLog('❤ '+username+' +1 жизнь','cmd');
+    addLog('++ '+username+' +1 жизнь','cmd');
   }
   else if (msg === '!chaos') {
-    chaosTimer = 120;
-    addLog('💥 '+username+' CHAOS MODE!','cmd');
+    chaosTimer = 180;
+    addLog('!! '+username+' CHAOS!','cmd');
   }
 }
 
-// ─── Streamer.bot WebSocket ───────────────────────────────────────
+// ─── Streamer.bot WebSocket — авто-підключення ────────────────────
 let ws = null;
+let wsReconnectTimer = null;
+const WS_HOST = 'ws://127.0.0.1';
+const WS_PORT = '8080';
 
 function connectSB() {
-  const host = document.getElementById('sbHost').value.trim();
-  const port = document.getElementById('sbPort').value.trim();
+  const host = (document.getElementById('sbHost')?.value || WS_HOST).trim();
+  const port = (document.getElementById('sbPort')?.value || WS_PORT).trim();
   const url  = host + ':' + port + '/';
-  addLog('Підключення до '+url+'...', 'inf');
+
+  if (ws && (ws.readyState === 0 || ws.readyState === 1)) return; // вже підключено/підключається
+
   setSBStatus(false, 'Connecting...');
+  addLog('Підключення до '+url+'...', 'inf');
+
   try {
     ws = new WebSocket(url);
+
     ws.onopen = () => {
       setSBStatus(true, 'Online');
       addLog('Підключено до Streamer.bot!', 'ok');
       ws.send(JSON.stringify({ request: 'Subscribe', id: 'game-sub', events: { Twitch: ['ChatMessage'] } }));
+      if (wsReconnectTimer) { clearTimeout(wsReconnectTimer); wsReconnectTimer = null; }
     };
-    ws.onclose = () => { setSBStatus(false, 'Offline'); addLog('З\'єднання закрито.','err'); };
-    ws.onerror = () => { setSBStatus(false,'Error'); addLog('Помилка WS','err'); };
+
+    ws.onclose = () => {
+      setSBStatus(false, 'Offline');
+      addLog('З\'єднання закрито. Перепідключення через 3с...', 'err');
+      ws = null;
+      wsReconnectTimer = setTimeout(connectSB, 3000);
+    };
+
+    ws.onerror = () => {
+      setSBStatus(false, 'Error');
+      addLog('Помилка WS. Повтор...', 'err');
+    };
+
     ws.onmessage = (e) => {
       try {
         const d = JSON.parse(e.data);
 
-        // Log raw for debug (перші 200 символів)
-        addLog('RAW: '+e.data.slice(0,200), 'inf');
+        addLog('RAW: '+e.data.slice(0,180), 'inf');
 
-        // Streamer.bot v0.1.x — event wrapper
-        const evType = d?.event?.type || d?.event?.source || '';
-        const isChat = evType === 'ChatMessage'
-          || d?.event?.type === 'Message'
-          || d?.data?.message !== undefined
-          || d?.data?.rawInput !== undefined
-          || d?.message !== undefined;
+        let msg = '', user = '';
 
-        if (isChat) {
-          // Пробуємо всі можливі шляхи до тексту повідомлення
-          const msg = d?.data?.message?.message
-            || d?.data?.message
-            || d?.data?.rawInput
-            || d?.message
-            || d?.data?.command
-            || '';
-
-          // Пробуємо всі можливі шляхи до імені
-          const user = d?.data?.message?.displayName
-            || d?.data?.displayName
-            || d?.data?.username
-            || d?.data?.message?.username
-            || d?.user
-            || 'viewer';
-
-          const txt = String(msg).trim();
-          if (txt.startsWith('!')) handleChatCommand(user, txt);
-          else if (txt) addChatLine(user, txt, false);
+        // Streamer.bot v0.2+ — {msgId, event:{type,source}, data:{...}}
+        if (d.msgId !== undefined) {
+          const ev = d?.event?.type || '';
+          if (ev === 'ChatMessage' || ev === 'Message') {
+            const m = d?.data?.message;
+            msg  = typeof m === 'string' ? m : (m?.message || m?.text || '');
+            user = d?.data?.displayName || d?.data?.username
+                || d?.data?.message?.displayName || d?.data?.message?.username || 'viewer';
+          }
         }
-      } catch(ex) { addLog('Parse err: '+ex.message,'err'); }
+        // Streamer.bot v0.1
+        else if (d?.event?.type === 'ChatMessage' || d?.event?.type === 'Message') {
+          const m = d?.data?.message;
+          msg  = typeof m === 'string' ? m : (m?.message || '');
+          user = d?.data?.displayName || d?.data?.username || 'viewer';
+        }
+        // Fallback
+        else if (typeof d?.data?.rawInput === 'string') {
+          msg  = d.data.rawInput;
+          user = d?.data?.displayName || d?.data?.username || 'viewer';
+        }
+
+        const txt = msg.trim();
+        if (txt) {
+          if (txt.startsWith('!')) handleChatCommand(user, txt);
+          else addChatLine(user, txt, false);
+        }
+      } catch(ex) { addLog('Parse err: '+ex.message, 'err'); }
     };
+
   } catch(ex) {
-    setSBStatus(false,'Error'); addLog('Не вдалось: '+ex.message,'err');
+    setSBStatus(false, 'Error');
+    addLog('Не вдалось: '+ex.message, 'err');
+    wsReconnectTimer = setTimeout(connectSB, 3000);
   }
 }
 
@@ -610,6 +643,7 @@ window.addEventListener('keyup', e => { keys[e.key] = false; });
 
 initStars();
 loop();
+connectSB(); // авто-підключення при старті
 </script>
 </body>
 </html>
