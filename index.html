@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pixel Invaders — Chat Plays</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #05080f;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    font-family: 'Courier New', monospace;
+    color: #aabbcc;
+    overflow: hidden;
+  }
+  #wrapper {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+  }
+  #gameCanvas {
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+    background: #05080f;
+    border: 2px solid #112233;
+    border-radius: 6px;
+    cursor: none;
+  }
+  #sidebar {
+    width: 220px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .panel {
+    background: #080d18;
+    border: 1px solid #112233;
+    border-radius: 6px;
+    padding: 10px 12px;
+  }
+  .panel-title {
+    font-size: 10px;
+    letter-spacing: 2px;
+    color: #4488ff;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    border-bottom: 1px solid #112233;
+    padding-bottom: 4px;
+  }
+  #sbStatus {
+    font-size: 11px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 6px;
+  }
+  .dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: #223344;
+    flex-shrink: 0;
+  }
+  .dot.on  { background: #00ffa3; box-shadow: 0 0 4px #00ffa3; }
+  .dot.err { background: #ff4466; }
+  #sbLog {
+    height: 100px;
+    overflow-y: auto;
+    font-size: 10px;
+    line-height: 1.6;
+    color: #334455;
+  }
+  #sbLog .ok  { color: #00cc80; }
+  #sbLog .inf { color: #4488ff; }
+  #sbLog .err { color: #ff4466; }
+  #sbLog .cmd { color: #ffcc44; }
+  #chatFeed {
+    height: 160px;
+    overflow-y: auto;
+    font-size: 11px;
+    line-height: 1.7;
+  }
+  .chat-msg { color: #445566; }
+  .chat-msg span { color: #7aaabb; }
+  .chat-msg.active span { color: #00ffa3; }
+  .chat-msg.active { color: #336655; }
+  #cmdList {
+    font-size: 10px;
+    line-height: 2;
+    color: #334455;
+  }
+  #cmdList b { color: #ffcc44; }
+  #cmdList em { color: #7aaabb; }
+  #sbInput {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+  #sbInput input {
+    background: #0a1525;
+    border: 1px solid #1a3050;
+    border-radius: 4px;
+    padding: 4px 7px;
+    font-family: 'Courier New', monospace;
+    font-size: 11px;
+    color: #88aaff;
+    outline: none;
+    width: 100%;
+  }
+  #sbInput input:focus { border-color: #4488ff; }
+  #sbConnBtn {
+    background: #052015;
+    border: 1px solid #005533;
+    border-radius: 4px;
+    padding: 5px;
+    font-family: 'Courier New', monospace;
+    font-size: 11px;
+    color: #00ffa3;
+    cursor: pointer;
+    width: 100%;
+    transition: background 0.15s;
+  }
+  #sbConnBtn:hover { background: #0a3020; }
+  #controls {
+    font-size: 10px;
+    color: #334455;
+    line-height: 2;
+    text-align: center;
+  }
+  #controls b { color: #4488ff; }
+  ::-webkit-scrollbar { width: 3px; }
+  ::-webkit-scrollbar-track { background: #060a14; }
+  ::-webkit-scrollbar-thumb { background: #1a3050; border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<div id="wrapper">
+  <div>
+    <canvas id="gameCanvas" width="600" height="480"></canvas>
+    <div id="controls" style="margin-top:8px;">
+      <b>←→</b> рух &nbsp; <b>ПРОБІЛ</b> стрільба &nbsp; <b>R</b> рестарт
+    </div>
+  </div>
+
+  <div id="sidebar">
+    <div class="panel">
+      <div class="panel-title">Streamer.bot</div>
+      <div id="sbInput">
+        <input id="sbHost" value="ws://127.0.0.1" placeholder="Host" />
+        <input id="sbPort" value="8080" placeholder="Port" />
+        <button id="sbConnBtn" onclick="connectSB()">▶ Connect</button>
+      </div>
+      <div id="sbStatus" style="margin-top:8px;">
+        <div class="dot" id="sbDot"></div>
+        <span id="sbStatusText" style="font-size:10px;">Offline</span>
+      </div>
+      <div id="sbLog"></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">Chat Feed</div>
+      <div id="chatFeed"><div class="chat-msg" style="color:#223344;">// Чекаємо на глядачів...</div></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">Команди чату</div>
+      <div id="cmdList">
+        <b>!left</b> <em>— рух вліво</em><br>
+        <b>!right</b> <em>— рух вправо</em><br>
+        <b>!shoot</b> <em>— вогонь!</em><br>
+        <b>!boss</b> <em>— спавн боса</em><br>
+        <b>!heal</b> <em>— +1 жизнь (mod)</em><br>
+        <b>!chaos</b> <em>— дощ куль!</em>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── Canvas setup ───────────────────────────────────────────────
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+ctx.imageSmoothingEnabled = false;
+const W = 600, H = 480;
+
+// ─── Game state ─────────────────────────────────────────────────
+let state = 'title';
+let score = 0, hiScore = 0, lives = 3, wave = 1;
+let player, bullets, ebullets, enemies, particles, stars;
+let keys = {}, lastShot = 0, enemyDir = 1, eMoveTimer = 0, eShootTimer = 0;
+let waveTimer = 0, chaosTimer = 0;
+
+function initStars() {
+  stars = [];
+  for (let i = 0; i < 110; i++)
+    stars.push({ x: Math.random()*W, y: Math.random()*H, s: Math.random()<0.25?2:1, sp: Math.random()*0.5+0.1 });
+}
+
+function initGame() {
+  player = { x: W/2-8, y: H-56, w: 16, h: 16, inv: 0 };
+  bullets = []; ebullets = []; particles = [];
+  score = 0; lives = 3; wave = 1;
+  enemyDir = 1; eMoveTimer = 0; eShootTimer = 0; chaosTimer = 0;
+  spawnWave();
+}
+
+function spawnWave() {
+  enemies = [];
+  const rows = Math.min(2+wave, 5);
+  const cols = Math.min(5+wave, 10);
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const t = r===0 ? 'boss' : r<2 ? 'med' : 'grunt';
+      enemies.push({ x: 60+c*46, y: 36+r*36, w: 12, h: 10, t, hp: t==='boss'?3:t==='med'?2:1, alive: true, anim: 0 });
+    }
+  }
+}
+
+// ─── Drawing helpers ─────────────────────────────────────────────
+function px(x,y,w,h,col){ ctx.fillStyle=col; ctx.fillRect(~~x,~~y,w,h); }
+
+function drawShip(x,y){
+  const p=~~x, q=~~y;
+  px(p+7,q,2,3,'#00ffa3'); px(p+4,q+3,8,2,'#00cc80');
+  px(p+2,q+5,12,4,'#00ffa3'); px(p,q+7,16,3,'#00cc80');
+  px(p+3,q+10,10,3,'#007755');
+  px(p+1,q+9,3,4,'#aaffdd'); px(p+12,q+9,3,4,'#aaffdd');
+  px(p+6,q+11,4,2,'#ffaa00'); px(p+7,q+13,2,3,'#ff6600');
+}
+
+function drawEnemy(e) {
+  const x=~~e.x, y=~~e.y, a=~~(e.anim/8)%2;
+  if (e.t==='boss') {
+    px(x,y+2,12,6,'#cc33ff'); px(x+2,y,8,2,'#cc33ff');
+    px(x+3,y+3,2,2,'#ff88ff'); px(x+7,y+3,2,2,'#ff88ff');
+    px(a?x-1:x, y+7, a?14:12, 3, '#9900cc');
+  } else if (e.t==='med') {
+    px(x+2,y,8,2,'#ff4466'); px(x,y+2,12,5,'#ff4466');
+    px(x+3,y+3,2,2,'#ffaacc'); px(x+7,y+3,2,2,'#ffaacc');
+    px(a?x+1:x, y+7, a?10:12, 2, '#cc2244');
+  } else {
+    px(x+3,y,6,2,'#ffcc00'); px(x+1,y+2,10,4,'#ffcc00');
+    px(x+2,y+3,2,2,'#fff0aa'); px(x+8,y+3,2,2,'#fff0aa');
+    px(a?x+2:x+1, y+6, a?8:10, 2, '#cc9900');
+  }
+}
+
+function drawBullet(b) { px(b.x,b.y,2,8, b.player?'#00ffcc':'#ff3366'); }
+
+function drawStars() {
+  for (const s of stars) {
+    ctx.fillStyle = s.s===2 ? '#1a2a3a' : '#0f1a25';
+    ctx.fillRect(~~s.x, ~~s.y, s.s, s.s);
+  }
+}
+
+function drawHUD() {
+  ctx.font = 'bold 13px "Courier New"';
+  ctx.fillStyle = '#00ffa3';
+  ctx.fillText('SCORE: '+score, 10, 18);
+  ctx.fillStyle = '#556677';
+  ctx.fillText('HI: '+hiScore, W/2-25, 18);
+  ctx.fillStyle = '#ff4466';
+  ctx.fillText('WAVE '+wave, W-75, 18);
+  for (let i=0; i<lives; i++) {
+    px(10+i*20, 26, 12, 8, '#00aa77');
+    px(12+i*20, 24, 8, 2, '#00ffa3');
+    px(16+i*20, 24, 2, 4, '#00ffa3');
+  }
+}
+
+// ─── Particles ────────────────────────────────────────────────────
+function spawnParticles(x,y,col,n) {
+  for (let i=0; i<n; i++) {
+    const a=Math.random()*Math.PI*2, sp=Math.random()*2.5+0.5;
+    particles.push({ x, y, vx:Math.cos(a)*sp, vy:Math.sin(a)*sp, life:25+Math.random()*20, col });
+  }
+}
+
+// ─── Chat commands handler ────────────────────────────────────────
+function handleChatCommand(username, message) {
+  const msg = message.toLowerCase().trim();
+  addChatLine(username, message, true);
+
+  if (state !== 'play') return;
+
+  if (msg === '!left')  { player.x = Math.max(0, player.x - 40); addLog('← '+username+' рух вліво','cmd'); }
+  else if (msg === '!right') { player.x = Math.min(W-player.w, player.x + 40); addLog('→ '+username+' рух вправо','cmd'); }
+  else if (msg === '!shoot') {
+    bullets.push({ x:player.x+7, y:player.y-8, vy:-7, player:true });
+    addLog('🔥 '+username+' вогонь!','cmd');
+  }
+  else if (msg === '!boss') {
+    enemies.push({ x:Math.random()*(W-20)+10, y:60, w:14, h:12, t:'boss', hp:5, alive:true, anim:0 });
+    addLog('👾 '+username+' викликав боса!','cmd');
+  }
+  else if (msg === '!heal') {
+    lives = Math.min(lives+1, 5);
+    addLog('❤ '+username+' +1 жизнь','cmd');
+  }
+  else if (msg === '!chaos') {
+    chaosTimer = 120;
+    addLog('💥 '+username+' CHAOS MODE!','cmd');
+  }
+}
+
+// ─── Streamer.bot WebSocket ───────────────────────────────────────
+let ws = null;
+
+function connectSB() {
+  const host = document.getElementById('sbHost').value.trim();
+  const port = document.getElementById('sbPort').value.trim();
+  const url  = host + ':' + port + '/';
+  addLog('Підключення до '+url+'...', 'inf');
+  setSBStatus(false, 'Connecting...');
+  try {
+    ws = new WebSocket(url);
+    ws.onopen = () => {
+      setSBStatus(true, 'Online');
+      addLog('Підключено до Streamer.bot!', 'ok');
+      ws.send(JSON.stringify({ request: 'Subscribe', id: 'game-sub', events: { Twitch: ['ChatMessage'] } }));
+    };
+    ws.onclose = () => { setSBStatus(false, 'Offline'); addLog('З\'єднання закрито.','err'); };
+    ws.onerror = () => { setSBStatus(false,'Error'); addLog('Помилка WS','err'); };
+    ws.onmessage = (e) => {
+      try {
+        const d = JSON.parse(e.data);
+        if (d.event && d.event.type === 'ChatMessage') {
+          const msg  = d.data?.message || d.data?.rawInput || '';
+          const user = d.data?.displayName || d.data?.username || 'anon';
+          if (msg.startsWith('!')) handleChatCommand(user, msg);
+          else addChatLine(user, msg, false);
+        }
+      } catch(ex) {}
+    };
+  } catch(ex) {
+    setSBStatus(false,'Error'); addLog('Не вдалось: '+ex.message,'err');
+  }
+}
+
+function setSBStatus(on, text) {
+  document.getElementById('sbDot').className = 'dot' + (on?' on':'');
+  document.getElementById('sbStatusText').textContent = text;
+}
+
+function addLog(msg, type='') {
+  const el = document.getElementById('sbLog');
+  const d = document.createElement('div');
+  d.className = type;
+  const ts = new Date().toLocaleTimeString('uk-UA',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  d.textContent = '['+ts+'] '+msg;
+  el.appendChild(d);
+  if (el.children.length > 40) el.removeChild(el.children[0]);
+  el.scrollTop = el.scrollHeight;
+}
+
+function addChatLine(user, msg, isCmd) {
+  const el = document.getElementById('chatFeed');
+  const d = document.createElement('div');
+  d.className = 'chat-msg' + (isCmd?' active':'');
+  d.innerHTML = '<span>'+user+':</span> '+msg.slice(0,40);
+  el.appendChild(d);
+  if (el.children.length > 30) el.removeChild(el.children[0]);
+  el.scrollTop = el.scrollHeight;
+}
+
+
+
+// ─── Update ───────────────────────────────────────────────────────
+function update() {
+  for (const s of stars) { s.y += s.sp; if (s.y > H) { s.y=0; s.x=Math.random()*W; } }
+
+  if (state === 'title') {
+    if (keys[' ']) { keys[' ']=false; initGame(); state='play'; }
+    return;
+  }
+  if (state === 'gameover') {
+    if (keys['r'] || keys[' ']) { keys['r']=false; keys[' ']=false; initGame(); state='play'; }
+    return;
+  }
+  if (state === 'winclear') {
+    waveTimer--;
+    if (waveTimer <= 0) { wave++; spawnWave(); state='play'; enemyDir=1; }
+    return;
+  }
+
+  if (player.inv > 0) player.inv--;
+
+  // Keyboard control
+  if (keys['ArrowLeft'])  player.x = Math.max(0, player.x - 3.5);
+  if (keys['ArrowRight']) player.x = Math.min(W-player.w, player.x + 3.5);
+  if (keys[' '] && Date.now()-lastShot > 180) {
+    bullets.push({ x:player.x+7, y:player.y-8, vy:-7, player:true });
+    lastShot = Date.now();
+  }
+
+  // Bullets
+  for (const b of bullets) b.y += b.vy;
+  for (const b of ebullets) { b.y += b.vy; b.x += (b.vx||0); }
+  for (const p of particles) { p.x+=p.vx; p.y+=p.vy; p.life--; }
+  for (const e of enemies) e.anim++;
+
+  // Chaos mode — bullet rain
+  if (chaosTimer > 0) {
+    chaosTimer--;
+    if (Math.random() < 0.4) {
+      ebullets.push({ x:Math.random()*W, y:0, vy:3+Math.random()*2, vx:(Math.random()-0.5)*1.5, player:false });
+    }
+  }
+
+  // Enemy movement
+  eMoveTimer++;
+  const interval = Math.max(8, 22-wave*2);
+  if (eMoveTimer > interval) {
+    eMoveTimer = 0;
+    let hitWall = false;
+    for (const e of enemies) {
+      if (!e.alive) continue;
+      e.x += enemyDir * 12;
+      if (e.x < 0 || e.x+e.w > W) hitWall = true;
+    }
+    if (hitWall) {
+      enemyDir *= -1;
+      for (const e of enemies) if (e.alive) e.y += 14;
+    }
+  }
+
+  // Enemy shooting
+  eShootTimer++;
+  if (eShootTimer > Math.max(35, 80-wave*6)) {
+    eShootTimer = 0;
+    const alive = enemies.filter(e=>e.alive);
+    if (alive.length) {
+      const s = alive[~~(Math.random()*alive.length)];
+      const sp = 1.8 + wave*0.25;
+      ebullets.push({ x:s.x+5, y:s.y+10, vy:sp, vx:(Math.random()-0.5)*1.5, player:false });
+    }
+  }
+
+  // Bullet vs enemy
+  for (const b of bullets) {
+    if (b.y < -10) continue;
+    for (const e of enemies) {
+      if (!e.alive) continue;
+      if (b.x>e.x && b.x<e.x+e.w && b.y>e.y && b.y<e.y+e.h) {
+        b.y = -999;
+        e.hp--;
+        spawnParticles(e.x+6, e.y+5, e.t==='boss'?'#cc33ff':e.t==='med'?'#ff4466':'#ffcc00', 5);
+        if (e.hp <= 0) {
+          e.alive = false;
+          score += e.t==='boss'?50:e.t==='med'?30:10;
+          if (score > hiScore) hiScore = score;
+          spawnParticles(e.x+6, e.y+5, e.t==='boss'?'#ff88ff':'#ffaa00', 14);
+        }
+      }
+    }
+  }
+
+  // Enemy bullet vs player
+  if (player.inv === 0) {
+    for (const b of ebullets) {
+      if (b.y > H) continue;
+      if (b.x>player.x && b.x<player.x+player.w && b.y>player.y && b.y<player.y+player.h) {
+        b.y = 9999; lives--; player.inv = 80;
+        spawnParticles(player.x+8, player.y+8, '#00ffa3', 12);
+        if (lives <= 0) { state='gameover'; if(score>hiScore)hiScore=score; return; }
+      }
+    }
+    for (const e of enemies) {
+      if (!e.alive) continue;
+      if (e.y+e.h > player.y && e.x < player.x+player.w && e.x+e.w > player.x) {
+        lives = 0; state='gameover'; return;
+      }
+    }
+  }
+
+  // Cleanup
+  bullets.splice(0, bullets.length, ...bullets.filter(b=>b.y>-20&&b.y<H+20));
+  ebullets.splice(0, ebullets.length, ...ebullets.filter(b=>b.y>-20&&b.y<H+20&&b.x>-10&&b.x<W+10));
+  particles.splice(0, particles.length, ...particles.filter(p=>p.life>0));
+
+  if (enemies.filter(e=>e.alive).length === 0) { state='winclear'; waveTimer=100; }
+}
+
+// ─── Draw ─────────────────────────────────────────────────────────
+function draw() {
+  ctx.fillStyle = '#05080f';
+  ctx.fillRect(0,0,W,H);
+  drawStars();
+
+  if (state === 'title') {
+    ctx.textAlign='center';
+    ctx.font='bold 34px "Courier New"';
+    ctx.fillStyle='#00ffa3';
+    ctx.fillText('PIXEL INVADERS', W/2, 130);
+    ctx.font='12px "Courier New"';
+    ctx.fillStyle='#4488ff';
+    ctx.fillText('CHAT PLAYS', W/2, 155);
+    ctx.font='13px "Courier New"';
+    ctx.fillStyle='#556677';
+    ctx.fillText('Глядачі керують через Twitch чат!', W/2, 200);
+    ctx.fillStyle='#ffcc00';
+    ctx.font='bold 16px "Courier New"';
+    ctx.fillText('ПРОБІЛ — почати', W/2, 260);
+    ctx.font='11px "Courier New"';
+    ctx.fillStyle='#334455';
+    ctx.fillText('HI-SCORE: '+hiScore, W/2, 300);
+    ctx.textAlign='left';
+    const demo=[{x:W/2-120,y:350,t:'boss',anim:Date.now()/16},{x:W/2-60,y:350,t:'med',anim:Date.now()/16+10},{x:W/2,y:350,t:'grunt',anim:Date.now()/16+5},{x:W/2+60,y:350,t:'med',anim:Date.now()/16+20},{x:W/2+120,y:350,t:'boss',anim:Date.now()/16+30}];
+    for (const e of demo) drawEnemy(e);
+    return;
+  }
+
+  for (const b of bullets) drawBullet(b);
+  for (const b of ebullets) drawBullet(b);
+  for (const e of enemies) if (e.alive) drawEnemy(e);
+
+  if (player.inv===0 || ~~(player.inv/6)%2===0) drawShip(player.x, player.y);
+
+  // Particles
+  for (const p of particles) {
+    ctx.globalAlpha = Math.max(0, p.life/45);
+    px(p.x, p.y, 2, 2, p.col);
+    ctx.globalAlpha = 1;
+  }
+
+  // Chaos overlay
+  if (chaosTimer > 0) {
+    ctx.fillStyle = 'rgba(255,50,100,0.04)';
+    ctx.fillRect(0,0,W,H);
+    ctx.font='bold 11px "Courier New"';
+    ctx.fillStyle='#ff3366';
+    ctx.textAlign='right';
+    ctx.fillText('CHAOS MODE', W-8, H-8);
+    ctx.textAlign='left';
+  }
+
+  drawHUD();
+
+  if (state === 'gameover') {
+    ctx.fillStyle='rgba(5,8,15,0.75)';
+    ctx.fillRect(0,0,W,H);
+    ctx.textAlign='center';
+    ctx.font='bold 30px "Courier New"';
+    ctx.fillStyle='#ff4466';
+    ctx.fillText('GAME OVER', W/2, 190);
+    ctx.font='15px "Courier New"';
+    ctx.fillStyle='#aabbcc';
+    ctx.fillText('Рахунок: '+score, W/2, 235);
+    if (score>=hiScore && score>0) { ctx.fillStyle='#ffcc00'; ctx.fillText('НОВИЙ РЕКОРД!', W/2, 265); }
+    ctx.fillStyle='#00ffa3';
+    ctx.font='12px "Courier New"';
+    ctx.fillText('R або ПРОБІЛ — знову', W/2, 310);
+    ctx.textAlign='left';
+  }
+
+  if (state === 'winclear') {
+    ctx.fillStyle='rgba(5,8,15,0.6)';
+    ctx.fillRect(0,0,W,H);
+    ctx.textAlign='center';
+    ctx.font='bold 26px "Courier New"';
+    ctx.fillStyle='#ffcc00';
+    ctx.fillText('ХВИЛЯ '+wave+' ПРОЙДЕНА!', W/2, 210);
+    ctx.font='13px "Courier New"';
+    ctx.fillStyle='#00ffa3';
+    ctx.fillText('Готуйся до наступної...', W/2, 260);
+    ctx.textAlign='left';
+  }
+}
+
+// ─── Loop ─────────────────────────────────────────────────────────
+function loop() { update(); draw(); requestAnimationFrame(loop); }
+
+window.addEventListener('keydown', e => {
+  keys[e.key] = true;
+  if ([' ','ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)) e.preventDefault();
+});
+window.addEventListener('keyup', e => { keys[e.key] = false; });
+
+initStars();
+loop();
+</script>
+</body>
+</html>
