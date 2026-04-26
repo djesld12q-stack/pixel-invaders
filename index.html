@@ -802,15 +802,19 @@ function showBal(user){
   sbSend({event:'balance_check', user, balance:b, spins:st.spins, wins:st.wins});
 }
 
-/* Надсилає повідомлення в Twitch чат через action "game" в Streamer.bot
-   Sub-Action в SB: Twitch → Send Message → текст: %message%            */
+/* Надсилає повідомлення напряму в Twitch чат через Streamer.bot SendMessage */
 function sbChat(message){
   if(!wsOk||!ws||ws.readyState!==1){dbg('sbChat: WS не підключено');return;}
   try{
+    // Streamer.bot WebSocket API v0.1.4 — прямий SendMessage без Action
     ws.send(JSON.stringify({
-      request: 'DoAction',
-      action:  { name: 'game' },
-      args:    { event: 'chat_message', message }
+      request: 'SendMessage',
+      id:      'slots-msg-'+Date.now(),
+      message: {
+        platform: 'twitch',
+        message:  message,
+        bot:      true   // надсилати від бота (якщо підключений), інакше від стрімера
+      }
     }));
     dbg('sbChat → '+message);
   }catch(e){dbg('sbChat ERR: '+e);}
