@@ -418,8 +418,20 @@ const PAY = {
 let spinning=false, ws=null, wsOk=false, reconn=null;
 const ST={spins:0,wins:0,jk:0};
 const bals={};
+const userST={};  // per-user статистика: {spins, wins}
+
 function getBal(u){return bals[u]??CFG.startBal;}
 function setBal(u,v){bals[u]=Math.max(0,Math.round(v));}
+
+function getUserST(u){
+  if(!userST[u]) userST[u]={spins:0,wins:0};
+  return userST[u];
+}
+function addUserSpin(u,won){
+  const s=getUserST(u);
+  s.spins++;
+  if(won) s.wins++;
+}
 
 /* ══════════════════════════════════════════════
    REEL INIT
@@ -547,6 +559,7 @@ function checkWin(res,user,bet){
     wb.textContent=w.jackpot?`🏆 JACKPOT! x${w.mult}`:`✨ ${w.name}! x${w.mult} (+${prize}pt)`;
     wb.classList.add('show');setTimeout(()=>wb.classList.remove('show'),4500);
 
+    addUserSpin(user, true);
     log(`🏆 ${user}: ${res.join(' ')} → ${w.name} x${w.mult} = +${prize}pt`);
     if(w.jackpot){
       sbChat(`🏆 JACKPOT! @${user} зірвав джекпот ${res.join(' ')} x${w.mult} = +${prize}pt! Баланс: ${getBal(user)}pt`);
@@ -556,6 +569,7 @@ function checkWin(res,user,bet){
     sbSend({event:'slot_win',user,result:res.join(' '),mult:w.mult,prize,jackpot:!!w.jackpot,balance:getBal(user)});
     if(w.jackpot)trigJK(user);
   } else {
+    addUserSpin(user, false);
     document.getElementById('pWin').textContent='—';
     log(`💀 ${user}: ${res.join(' ')} — немає виграшу`);
     sbChat(`💀 @${user} не пощастило ${res.join(' ')} | Баланс: ${getBal(user)}pt`);
@@ -771,9 +785,21 @@ function routeCmd(cmd,user,arg){
 }
 
 function showBal(user){
-  const b=getBal(user);
-  log(`💰 ${user}: баланс = ${b}pt`);
-  sbChat(`@${user} 💰 Твій баланс: ${b} pt`);
+  const b   = getBal(user);
+  const st  = getUserST(user);
+  const diff = b - CFG.startBal;
+  const sign = diff >= 0 ? '+' : '';
+
+  let msg = `@${user} 💰 Баланс: ${b.toLocaleString()} pt`;
+  if(st.spins > 0){
+    msg += ` | 🎰 Спіни: ${st.spins} | ✅ ${st.wins} | 💀 ${st.spins - st.wins}`;
+  }
+  msg += ` | ${sign}${diff.toLocaleString()} pt від старту`;
+
+  log(`💰 ${user}: ${b}pt`);
+  sbChat(msg);
+  // Також надсилаємо дані для C# скрипта в SB (для збереження статистики)
+  sbSend({event:'balance_check', user, balance:b, spins:st.spins, wins:st.wins});
 }
 
 /* Надсилає повідомлення в Twitch чат через action "game" в Streamer.bot
