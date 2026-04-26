@@ -951,21 +951,71 @@ function showBal(user){
 }
 
 /* Надсилає повідомлення напряму в Twitch чат через Streamer.bot SendMessage */
-function sbChat(message){
-  if(!wsOk||!ws||ws.readyState!==1){dbg('sbChat: WS не підключено');return;}
-  try{
-    // Streamer.bot WebSocket API v0.1.4 — прямий SendMessage без Action
+/* ══════════════════════════════════════════════
+   TWITCH CHAT — надсилаємо напряму через API
+   Використовує токен отриманий через OAuth
+══════════════════════════════════════════════ */
+// broadcaster_id кешуємо після першого запиту
+let _broadcasterId = null;
+
+async function getBroadcasterId() {
+  if (_broadcasterId) return _broadcasterId;
+  if (!CFG.twitchToken || !CFG.twitchLogin) return null;
+  try {
+    const r = await fetch(
+      `https://api.twitch.tv/helix/users?login=${encodeURIComponent(CFG.twitchLogin)}`,
+      {
+        headers: {
+          'Authorization': `Bearer ${CFG.twitchToken}`,
+          'Client-Id':     TWITCH_CLIENT_ID,
+        }
+      }
+    );
+    if (!r.ok) return null;
+    const d = await r.json();
+    _broadcasterId = d.data?.[0]?.id || null;
+    return _broadcasterId;
+  } catch { return null; }
+}
+
+async function sbChat(message) {
+  // Спробувати надіслати через Twitch API (якщо є токен)
+  if (CFG.twitchToken && CFG.twitchLogin) {
+    try {
+      const broadcasterId = await getBroadcasterId();
+      if (broadcasterId) {
+        const r = await fetch('https://api.twitch.tv/helix/chat/messages', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${CFG.twitchToken}`,
+            'Client-Id':     TWITCH_CLIENT_ID,
+            'Content-Type':  'application/json',
+          },
+          body: JSON.stringify({
+            broadcaster_id: broadcasterId,
+            sender_id:      broadcasterId,
+            message:        message,
+          })
+        });
+        if (r.ok) {
+          dbg('TwitchAPI chat → ' + message);
+          return;
+        }
+        dbg('TwitchAPI chat ERR: ' + r.status);
+      }
+    } catch(e) { dbg('TwitchAPI chat EX: ' + e); }
+  }
+
+  // Fallback — через Streamer.bot WebSocket
+  if (!wsOk || !ws || ws.readyState !== 1) { dbg('sbChat: WS не підключено'); return; }
+  try {
     ws.send(JSON.stringify({
       request: 'SendMessage',
-      id:      'slots-msg-'+Date.now(),
-      message: {
-        platform: 'twitch',
-        message:  message,
-        bot:      true   // надсилати від бота (якщо підключений), інакше від стрімера
-      }
+      id:      'slots-msg-' + Date.now(),
+      message: { platform: 'twitch', message, bot: true }
     }));
-    dbg('sbChat → '+message);
-  }catch(e){dbg('sbChat ERR: '+e);}
+    dbg('sbChat(WS) → ' + message);
+  } catch(e) { dbg('sbChat ERR: ' + e); }
 }
 
 function sbSend(payload){
