@@ -3,647 +3,713 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Pixel Invaders — Chat Plays</title>
+<title>🎰 Stream Slots</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Share+Tech+Mono&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body {
-    background: #05080f;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    min-height: 100vh;
-    font-family: 'Courier New', monospace;
-    color: #aabbcc;
-    overflow: hidden;
-  }
-  #wrapper {
-    display: flex;
-    gap: 16px;
-    align-items: flex-start;
-  }
-  #gameCanvas {
-    image-rendering: pixelated;
-    image-rendering: crisp-edges;
-    background: #05080f;
-    border: 2px solid #112233;
-    border-radius: 6px;
-    cursor: none;
-  }
-  #sidebar {
-    width: 220px;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-  }
-  .panel {
-    background: #080d18;
-    border: 1px solid #112233;
-    border-radius: 6px;
-    padding: 10px 12px;
-  }
-  .panel-title {
-    font-size: 10px;
-    letter-spacing: 2px;
-    color: #4488ff;
-    text-transform: uppercase;
-    margin-bottom: 8px;
-    border-bottom: 1px solid #112233;
-    padding-bottom: 4px;
-  }
-  #sbStatus {
-    font-size: 11px;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    margin-bottom: 6px;
-  }
-  .dot {
-    width: 7px; height: 7px;
-    border-radius: 50%;
-    background: #223344;
-    flex-shrink: 0;
-  }
-  .dot.on  { background: #00ffa3; box-shadow: 0 0 4px #00ffa3; }
-  .dot.err { background: #ff4466; }
-  #sbLog {
-    height: 100px;
-    overflow-y: auto;
-    font-size: 10px;
-    line-height: 1.6;
-    color: #334455;
-  }
-  #sbLog .ok  { color: #00cc80; }
-  #sbLog .inf { color: #4488ff; }
-  #sbLog .err { color: #ff4466; }
-  #sbLog .cmd { color: #ffcc44; }
-  #chatFeed {
-    height: 160px;
-    overflow-y: auto;
-    font-size: 11px;
-    line-height: 1.7;
-  }
-  .chat-msg { color: #445566; }
-  .chat-msg span { color: #7aaabb; }
-  .chat-msg.active span { color: #00ffa3; }
-  .chat-msg.active { color: #336655; }
-  #cmdList {
-    font-size: 10px;
-    line-height: 2;
-    color: #334455;
-  }
-  #cmdList b { color: #ffcc44; }
-  #cmdList em { color: #7aaabb; }
-  #sbInput {
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-  }
-  #sbInput input {
-    background: #0a1525;
-    border: 1px solid #1a3050;
-    border-radius: 4px;
-    padding: 4px 7px;
-    font-family: 'Courier New', monospace;
-    font-size: 11px;
-    color: #88aaff;
-    outline: none;
-    width: 100%;
-  }
-  #sbInput input:focus { border-color: #4488ff; }
-  #sbConnBtn {
-    background: #052015;
-    border: 1px solid #005533;
-    border-radius: 4px;
-    padding: 5px;
-    font-family: 'Courier New', monospace;
-    font-size: 11px;
-    color: #00ffa3;
-    cursor: pointer;
-    width: 100%;
-    transition: background 0.15s;
-  }
-  #sbConnBtn:hover { background: #0a3020; }
-  #controls {
-    font-size: 10px;
-    color: #334455;
-    line-height: 2;
-    text-align: center;
-  }
-  #controls b { color: #4488ff; }
-  ::-webkit-scrollbar { width: 3px; }
-  ::-webkit-scrollbar-track { background: #060a14; }
-  ::-webkit-scrollbar-thumb { background: #1a3050; border-radius: 2px; }
+:root {
+  --gold:  #FFD700;
+  --gold2: #FFA500;
+  --gold3: #8B6914;
+  --dark:  #060402;
+  --panel: #100c06;
+  --border:#3a2a08;
+  --bord2: #5a4010;
+  --neon:  #ff8800;
+  --green: #00ff88;
+  --text:  #f0e0b0;
+  --dim:   #7a6a40;
+  --symH:  110px;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{
+  width:100%;height:100%;overflow:hidden;
+  background:var(--dark);
+  font-family:'Rajdhani',sans-serif;
+  color:var(--text);
+  display:flex;align-items:center;justify-content:center;
+}
+.bg{
+  position:fixed;inset:0;pointer-events:none;
+  background:
+    radial-gradient(ellipse 70% 40% at 50% 110%,rgba(200,100,0,.08),transparent 70%),
+    radial-gradient(ellipse 50% 20% at 50% -10%,rgba(255,180,0,.05),transparent 60%);
+}
+.scan{
+  position:fixed;inset:0;pointer-events:none;z-index:9000;
+  background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,.06) 3px,rgba(0,0,0,.06) 4px);
+}
+
+/* ── APP SHELL ── */
+.app{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;}
+
+/* ── MARQUEE ── */
+.mq-wrap{
+  width:720px;overflow:hidden;
+  background:linear-gradient(90deg,#080500,#160f02,#080500);
+  border:1px solid var(--bord2);border-bottom:none;
+  border-radius:6px 6px 0 0;padding:3px 0;
+}
+.mq-inner{
+  display:inline-flex;gap:48px;white-space:nowrap;
+  animation:mq 20s linear infinite;
+  font-family:'Bebas Neue',sans-serif;font-size:12px;letter-spacing:.22em;color:var(--gold2);
+}
+.mq-inner span{color:var(--dim);}
+@keyframes mq{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+
+/* ── TITLE BAR ── */
+.title-bar{
+  width:720px;
+  background:linear-gradient(180deg,#1e1500,#110e00);
+  border:2px solid var(--bord2);border-top:3px solid var(--gold3);border-bottom:none;
+  padding:10px 24px 8px;
+  display:flex;align-items:center;justify-content:space-between;
+}
+.title-main{
+  font-family:'Bebas Neue',sans-serif;font-size:44px;letter-spacing:.22em;line-height:1;
+  color:var(--gold);
+  text-shadow:0 0 22px rgba(255,215,0,.7),0 0 60px rgba(255,140,0,.3),0 2px 0 #6b4e00,0 3px 0 #4a3600;
+}
+.title-main em{color:var(--neon);font-style:normal;text-shadow:0 0 20px rgba(255,136,0,.8);}
+.title-sub{font-family:'Bebas Neue',sans-serif;font-size:10px;letter-spacing:.35em;color:var(--dim);margin-top:3px;}
+.conn-col{display:flex;flex-direction:column;align-items:flex-end;gap:5px;}
+.conn-row{display:flex;align-items:center;gap:7px;font-size:12px;letter-spacing:.08em;color:var(--dim);}
+#cdot{width:9px;height:9px;border-radius:50%;background:#333;flex-shrink:0;transition:background .4s,box-shadow .4s;}
+#cdot.on {background:var(--green);box-shadow:0 0 8px var(--green);}
+#cdot.err{background:#ff3333;box-shadow:0 0 8px #ff3333;}
+#cdot.cx {background:var(--gold2);box-shadow:0 0 8px var(--gold2);animation:blk .6s infinite alternate;}
+@keyframes blk{from{opacity:1}to{opacity:.2}}
+#clabel{font-size:11px;}
+.conn-addr{font-family:'Share Tech Mono',monospace;font-size:10px;color:#2e2510;letter-spacing:.1em;}
+
+/* ── MACHINE BODY ── */
+.machine{
+  width:720px;
+  background:linear-gradient(180deg,#120e04,#08060000);
+  border:2px solid var(--bord2);border-top:none;
+  padding:18px 28px 22px;
+  position:relative;
+  box-shadow:inset 0 6px 30px rgba(0,0,0,.7),0 20px 60px rgba(0,0,0,.9);
+}
+
+/* ── REELS ── */
+.reels-frame{
+  position:relative;height:330px;
+  background:#000;border-radius:10px;
+  border:3px solid #1a1200;overflow:hidden;
+  display:flex;
+  box-shadow:inset 0 0 50px rgba(0,0,0,1),0 0 0 1px var(--bord2),0 0 30px rgba(255,140,0,.05);
+}
+
+/* payline stripe */
+.payline{
+  position:absolute;top:50%;left:0;right:0;
+  height:112px;transform:translateY(-50%);
+  border-top:2px solid rgba(255,215,0,.3);
+  border-bottom:2px solid rgba(255,215,0,.3);
+  pointer-events:none;z-index:20;
+}
+.payline::before,.payline::after{
+  content:'◀ PAYLINE ▶';
+  position:absolute;top:50%;transform:translateY(-50%);
+  font-family:'Bebas Neue',sans-serif;font-size:9px;letter-spacing:.2em;
+  color:rgba(255,215,0,.35);
+}
+.payline::before{left:8px;}
+.payline::after{right:8px;}
+
+/* reel column */
+.rc{
+  flex:1;border-right:1px solid #181000;
+  position:relative;overflow:hidden;background:#020100;
+}
+.rc:last-child{border-right:none;}
+.rc::before,.rc::after{
+  content:'';position:absolute;left:0;right:0;height:85px;z-index:10;pointer-events:none;
+}
+.rc::before{top:0;background:linear-gradient(180deg,rgba(0,0,0,.98) 0%,rgba(0,0,0,.55) 60%,transparent 100%);}
+.rc::after {bottom:0;background:linear-gradient(0deg,rgba(0,0,0,.98) 0%,rgba(0,0,0,.55) 60%,transparent 100%);}
+
+.rs{position:absolute;left:0;right:0;top:0;display:flex;flex-direction:column;will-change:transform;}
+
+.sym{
+  height:var(--symH);display:flex;align-items:center;justify-content:center;
+  font-size:66px;flex-shrink:0;user-select:none;
+}
+
+@keyframes wflash{0%,100%{background:transparent}50%{background:rgba(255,215,0,.14);box-shadow:inset 0 0 30px rgba(255,215,0,.2);}}
+.rc.wg{animation:wflash .35s ease-in-out 4;}
+
+/* win banner */
+.wb{
+  position:absolute;top:-2px;left:0;right:0;height:36px;z-index:30;
+  display:flex;align-items:center;justify-content:center;
+  font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:.2em;
+  color:var(--gold);text-shadow:0 0 14px rgba(255,215,0,.8);
+  background:linear-gradient(90deg,transparent,rgba(255,190,0,.12),transparent);
+  opacity:0;transition:opacity .3s;pointer-events:none;
+}
+.wb.show{opacity:1;}
+
+/* ── STATS ── */
+.stats-bar{
+  display:flex;margin-top:14px;
+  border:1px solid var(--border);border-radius:6px;overflow:hidden;
+}
+.sc{
+  flex:1;padding:7px 10px;
+  background:linear-gradient(180deg,#110d04,#0c0900);
+  border-right:1px solid var(--border);text-align:center;
+}
+.sc:last-child{border-right:none;}
+.sc .lbl{font-size:10px;letter-spacing:.18em;color:var(--dim);text-transform:uppercase;margin-bottom:2px;}
+.sc .val{font-family:'Bebas Neue',sans-serif;font-size:26px;letter-spacing:.05em;color:var(--gold);line-height:1;text-shadow:0 0 8px rgba(255,215,0,.25);}
+.sc .val.g{color:var(--green);}
+.sc .val.o{color:var(--neon);}
+
+/* ── PRICE ROW ── */
+.price-row{
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  margin-top:13px;font-size:11px;letter-spacing:.12em;color:var(--dim);text-transform:uppercase;
+}
+.chip{
+  background:rgba(255,140,0,.1);border:1px solid rgba(255,140,0,.3);border-radius:4px;
+  padding:2px 10px;font-family:'Bebas Neue',sans-serif;font-size:15px;letter-spacing:.08em;color:var(--neon);
+}
+
+/* ── SPIN ROW ── */
+.spin-row{display:flex;align-items:center;justify-content:center;margin-top:15px;gap:24px;}
+
+.side-panel{width:130px;display:flex;flex-direction:column;gap:7px;}
+.sp-cell{
+  background:linear-gradient(135deg,#110d04,#0c0900);
+  border:1px solid var(--border);border-radius:6px;padding:7px 10px;text-align:center;
+}
+.sp-cell .lbl{font-size:9px;letter-spacing:.15em;color:var(--dim);text-transform:uppercase;}
+.sp-cell .val{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:.05em;color:var(--gold);line-height:1.1;}
+
+.spin-btn{
+  width:116px;height:116px;border-radius:50%;flex-shrink:0;
+  background:radial-gradient(circle at 38% 33%,#ffaa00,#cc5500 48%,#882200 100%);
+  border:none;outline:none;cursor:pointer;
+  font-family:'Bebas Neue',sans-serif;font-size:25px;letter-spacing:.1em;
+  color:#fff;text-shadow:0 2px 4px rgba(0,0,0,.8);
+  position:relative;
+  box-shadow:0 5px 0 #551100,0 9px 0 #330a00,0 12px 30px rgba(220,70,0,.65),0 0 70px rgba(255,100,0,.12);
+  transition:transform .1s,box-shadow .2s;
+}
+.spin-btn::before{
+  content:'';position:absolute;top:9px;left:14px;right:20px;height:38%;
+  border-radius:50% 50% 0 0/100% 100% 0 0;
+  background:linear-gradient(180deg,rgba(255,255,255,.22),transparent);pointer-events:none;
+}
+.spin-btn:hover:not(:disabled){
+  transform:translateY(-3px);
+  box-shadow:0 8px 0 #551100,0 13px 0 #330a00,0 18px 40px rgba(255,100,0,.75),0 0 90px rgba(255,120,0,.22);
+}
+.spin-btn:active:not(:disabled){transform:translateY(5px);box-shadow:0 2px 0 #551100,0 4px 14px rgba(200,60,0,.35);}
+.spin-btn:disabled{opacity:.45;cursor:not-allowed;transform:none;}
+
+/* ── PAYTABLE ── */
+.paytable{
+  width:720px;background:#060400;
+  border:1px solid var(--border);border-top:none;
+  display:flex;flex-wrap:wrap;gap:5px;padding:7px 14px;justify-content:center;
+}
+.pe{
+  display:flex;align-items:center;gap:4px;
+  background:rgba(255,200,0,.04);border:1px solid var(--border);border-radius:3px;padding:2px 8px;
+  font-size:11px;color:var(--dim);
+}
+.pe .es{font-size:15px;}
+.pe .em{font-family:'Bebas Neue',sans-serif;font-size:14px;color:var(--gold);}
+
+/* ── LOG ── */
+.log-strip{
+  width:720px;height:27px;overflow:hidden;
+  background:#050300;border:1px solid var(--border);border-top:none;
+  border-radius:0 0 8px 8px;
+  padding:5px 14px;
+  font-family:'Share Tech Mono',monospace;font-size:11px;color:#3a3018;
+}
+#logtext{transition:opacity .2s;}
+
+/* ── JACKPOT ── */
+#jkov{
+  position:fixed;inset:0;z-index:8000;
+  background:rgba(0,0,0,.9);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  opacity:0;pointer-events:none;transition:opacity .5s;
+}
+#jkov.show{opacity:1;pointer-events:all;}
+.jkicon{font-size:88px;display:block;animation:jspin 2s linear infinite;}
+@keyframes jspin{to{transform:rotate(360deg)}}
+.jktitle{
+  font-family:'Bebas Neue',sans-serif;font-size:128px;letter-spacing:.2em;line-height:.9;
+  color:var(--gold);
+  text-shadow:0 0 40px rgba(255,215,0,1),0 0 100px rgba(255,165,0,.6),0 0 200px rgba(255,100,0,.3);
+  animation:jpulse .4s ease-in-out infinite alternate;
+}
+@keyframes jpulse{from{transform:scale(1)}to{transform:scale(1.04)}}
+.jkuser{font-family:'Bebas Neue',sans-serif;font-size:50px;color:#fff;letter-spacing:.15em;margin-top:8px;text-shadow:0 0 30px rgba(255,255,255,.4);}
+.jkdismiss{margin-top:22px;font-size:11px;color:#555;letter-spacing:.15em;cursor:pointer;padding:10px 24px;}
+
+/* coins */
+.coin{position:fixed;font-size:22px;pointer-events:none;z-index:8100;animation:cdrop var(--d) linear forwards;}
+@keyframes cdrop{0%{transform:translateY(-80px) rotate(0deg);opacity:1}100%{transform:translateY(110vh) rotate(var(--r));opacity:0}}
 </style>
 </head>
 <body>
+<div class="bg"></div>
+<div class="scan"></div>
 
-<div id="wrapper">
-  <div>
-    <canvas id="gameCanvas" width="600" height="480"></canvas>
-    <div id="controls" style="margin-top:8px;">
-      <b>←→</b> рух &nbsp; <b>ПРОБІЛ</b> стрільба &nbsp; <b>R</b> рестарт
+<!-- JACKPOT OVERLAY -->
+<div id="jkov" onclick="closeJK()">
+  <span class="jkicon">🎰</span>
+  <div class="jktitle">JACKPOT</div>
+  <div class="jkuser" id="jkuser"></div>
+  <div class="jkdismiss">[ натисніть щоб закрити ]</div>
+</div>
+
+<div class="app">
+
+  <!-- MARQUEE -->
+  <div class="mq-wrap"><div class="mq-inner">
+    <span>★</span> !spin — крутити барабан
+    <span>★</span> !spin [ставка] — своя ставка
+    <span>★</span> !balance — перевірити баланс
+    <span>★</span> 7️⃣7️⃣7️⃣ = JACKPOT x100
+    <span>★</span> !spin — крутити барабан
+    <span>★</span> !spin [ставка] — своя ставка
+    <span>★</span> !balance — перевірити баланс
+    <span>★</span> 7️⃣7️⃣7️⃣ = JACKPOT x100
+  </div></div>
+
+  <!-- TITLE BAR -->
+  <div class="title-bar">
+    <div>
+      <div class="title-main">STREAM <em>SLOTS</em></div>
+      <div class="title-sub">POWERED BY STREAMER.BOT</div>
+    </div>
+    <div class="conn-col">
+      <div class="conn-row">
+        <div id="cdot" class="cx"></div>
+        <span id="clabel">Підключення...</span>
+      </div>
+      <div class="conn-addr">ws://127.0.0.1:8080</div>
     </div>
   </div>
 
-  <div id="sidebar">
-    <div class="panel">
-      <div class="panel-title">Streamer.bot</div>
-      <div id="sbInput">
-        <input id="sbHost" value="ws://127.0.0.1" placeholder="Host" />
-        <input id="sbPort" value="8080" placeholder="Port" />
-      </div>
-      <div id="sbStatus" style="margin-top:8px;">
-        <div class="dot" id="sbDot"></div>
-        <span id="sbStatusText" style="font-size:10px;">Підключення...</span>
-      </div>
-      <div style="font-size:10px;color:#223344;margin-top:4px;">авто-підключення при старті</div>
-      <div id="sbLog"></div>
+  <!-- MACHINE -->
+  <div class="machine">
+    <div class="wb" id="wb">✨ ВИГРАШ! ✨</div>
+
+    <!-- REELS FRAME -->
+    <div class="reels-frame">
+      <div class="payline"></div>
+      <div class="rc" id="rc0"><div class="rs" id="rs0"></div></div>
+      <div class="rc" id="rc1"><div class="rs" id="rs1"></div></div>
+      <div class="rc" id="rc2"><div class="rs" id="rs2"></div></div>
     </div>
 
-    <div class="panel">
-      <div class="panel-title">Chat Feed</div>
-      <div id="chatFeed"><div class="chat-msg" style="color:#223344;">// Чекаємо на глядачів...</div></div>
+    <!-- STATS -->
+    <div class="stats-bar">
+      <div class="sc"><div class="lbl">Спіни</div><div class="val" id="ss">0</div></div>
+      <div class="sc"><div class="lbl">Виграші</div><div class="val g" id="sw">0</div></div>
+      <div class="sc"><div class="lbl">Jackpots</div><div class="val o" id="sj">0</div></div>
     </div>
 
-    <div class="panel">
-      <div class="panel-title">Команди чату</div>
-      <div id="cmdList">
-        <b>!play</b> <em>— старт гри</em><br>
-        <b>!left</b> <em>— рух вліво</em><br>
-        <b>!right</b> <em>— рух вправо</em><br>
-        <b>!shoot</b> <em>— вогонь!</em><br>
-        <b>!boss</b> <em>— спавн боса</em><br>
-        <b>!heal</b> <em>— +1 жизнь (mod)</em><br>
-        <b>!chaos</b> <em>— дощ куль!</em>
+    <!-- PRICE -->
+    <div class="price-row">
+      Базова ціна: <div class="chip" id="cPrice">1 pt</div>
+      &nbsp;·&nbsp; Мін: <div class="chip" id="cMin">1</div>
+      &nbsp;·&nbsp; Макс: <div class="chip" id="cMax">100</div>
+    </div>
+
+    <!-- SPIN ROW -->
+    <div class="spin-row">
+      <div class="side-panel">
+        <div class="sp-cell"><div class="lbl">Гравець</div><div class="val" id="spUser" style="font-size:13px;color:var(--text)">—</div></div>
+        <div class="sp-cell"><div class="lbl">Ставка</div><div class="val" id="spBet">—</div></div>
+      </div>
+
+      <button class="spin-btn" id="spinBtn" onclick="localSpin()">SPIN</button>
+
+      <div class="side-panel">
+        <div class="sp-cell"><div class="lbl">Баланс</div><div class="val" id="spBal" style="color:var(--green)">1000</div></div>
+        <div class="sp-cell"><div class="lbl">Виграш</div><div class="val" id="spWin" style="color:var(--neon)">—</div></div>
       </div>
     </div>
-  </div>
+  </div><!-- /machine -->
+
+  <!-- PAYTABLE -->
+  <div class="paytable" id="paytable"></div>
+
+  <!-- LOG -->
+  <div class="log-strip"><span id="logtext">🎰 Ініціалізація...</span></div>
 </div>
 
 <script>
-// ─── Canvas setup ───────────────────────────────────────────────
-const canvas = document.getElementById('gameCanvas');
-const ctx = canvas.getContext('2d');
-ctx.imageSmoothingEnabled = false;
-const W = 600, H = 480;
+/* ══════════════════════════════════
+   CONFIG
+══════════════════════════════════ */
+const CFG = {
+  host:       '127.0.0.1',
+  port:       8080,
+  basePrice:  1,
+  minBet:     1,
+  maxBet:     100,
+  startBal:   1000,
+  reconnMs:   3000,
+};
 
-// ─── Game state ─────────────────────────────────────────────────
-let state = 'title';
-let score = 0, hiScore = 0, lives = 3, wave = 1;
-let player, bullets, ebullets, enemies, particles, stars;
-let keys = {}, lastShot = 0, enemyDir = 1, eMoveTimer = 0, eShootTimer = 0;
-let waveTimer = 0, chaosTimer = 0;
+/* ══════════════════════════════════
+   SYMBOLS & PAYTABLE
+══════════════════════════════════ */
+const SYMS    = ['🍒','🍋','🍊','🍇','🔔','⭐','💎','7️⃣'];
+const WEIGHTS = [ 30,  24,  18,  12,   8,   5,   2,   1];
+const WTOTAL  = WEIGHTS.reduce((a,b)=>a+b,0);
 
-function initStars() {
-  stars = [];
-  for (let i = 0; i < 110; i++)
-    stars.push({ x: Math.random()*W, y: Math.random()*H, s: Math.random()<0.25?2:1, sp: Math.random()*0.5+0.1 });
-}
+const PAY = {
+  '🍒🍒🍒': {name:'Три Вишні',     mult:2},
+  '🍋🍋🍋': {name:'Три Лимони',    mult:3},
+  '🍊🍊🍊': {name:'Три Апельсини', mult:5},
+  '🍇🍇🍇': {name:'Три Виноград',  mult:7},
+  '🔔🔔🔔': {name:'Три Дзвони',    mult:10},
+  '⭐⭐⭐':  {name:'Три Зірки',    mult:20},
+  '💎💎💎': {name:'Три Діаманти',  mult:50},
+  '7️⃣7️⃣7️⃣':{name:'JACKPOT 777',  mult:100, jackpot:true},
+};
 
-function initGame() {
-  player = { x: W/2-8, y: H-56, w: 16, h: 16, inv: 0 };
-  bullets = []; ebullets = []; particles = [];
-  score = 0; lives = 3; wave = 1;
-  enemyDir = 1; eMoveTimer = 0; eShootTimer = 0; chaosTimer = 0;
-  spawnWave();
-}
+/* ══════════════════════════════════
+   STATE
+══════════════════════════════════ */
+let spinning = false;
+let ws = null, wsOk = false, reconn = null;
+const st = {spins:0, wins:0, jk:0};
+const bals = {};
 
-function spawnWave() {
-  enemies = [];
-  const rows = Math.min(2+wave, 5);
-  const cols = Math.min(5+wave, 10);
-  for (let r = 0; r < rows; r++) {
-    for (let c = 0; c < cols; c++) {
-      const t = r===0 ? 'boss' : r<2 ? 'med' : 'grunt';
-      enemies.push({ x: 60+c*46, y: 36+r*36, w: 12, h: 10, t, hp: t==='boss'?3:t==='med'?2:1, alive: true, anim: 0 });
+function getBal(u){ return bals[u] ?? CFG.startBal; }
+function setBal(u,v){ bals[u] = Math.max(0, Math.round(v)); }
+
+/* ══════════════════════════════════
+   REEL INIT  — 32 cells, centre = index 10
+══════════════════════════════════ */
+const TOTAL_CELLS = 32;
+const SYM_H = 110;       // px — must match CSS --symH
+const CENTRE = 10;       // which cell index sits at payline
+
+function initReels(){
+  for(let r=0;r<3;r++){
+    const rs = document.getElementById(`rs${r}`);
+    rs.innerHTML='';
+    for(let i=0;i<TOTAL_CELLS;i++){
+      const d=document.createElement('div');
+      d.className='sym'; d.id=`s${r}_${i}`;
+      d.textContent=rndSym(); rs.appendChild(d);
     }
+    snapTo(r, CENTRE);
   }
 }
 
-// ─── Drawing helpers ─────────────────────────────────────────────
-function px(x,y,w,h,col){ ctx.fillStyle=col; ctx.fillRect(~~x,~~y,w,h); }
-
-function drawShip(x,y){
-  const p=~~x, q=~~y;
-  px(p+7,q,2,3,'#00ffa3'); px(p+4,q+3,8,2,'#00cc80');
-  px(p+2,q+5,12,4,'#00ffa3'); px(p,q+7,16,3,'#00cc80');
-  px(p+3,q+10,10,3,'#007755');
-  px(p+1,q+9,3,4,'#aaffdd'); px(p+12,q+9,3,4,'#aaffdd');
-  px(p+6,q+11,4,2,'#ffaa00'); px(p+7,q+13,2,3,'#ff6600');
+/* position reel so cell[idx] is at payline centre (165px from top of 330px window) */
+function snapTo(r, idx){
+  const rs=document.getElementById(`rs${r}`);
+  rs.style.transition='none';
+  rs.style.transform=`translateY(${165-(idx*SYM_H+SYM_H/2)}px)`;
 }
 
-function drawEnemy(e) {
-  const x=~~e.x, y=~~e.y, a=~~(e.anim/8)%2;
-  if (e.t==='boss') {
-    px(x,y+2,12,6,'#cc33ff'); px(x+2,y,8,2,'#cc33ff');
-    px(x+3,y+3,2,2,'#ff88ff'); px(x+7,y+3,2,2,'#ff88ff');
-    px(a?x-1:x, y+7, a?14:12, 3, '#9900cc');
-  } else if (e.t==='med') {
-    px(x+2,y,8,2,'#ff4466'); px(x,y+2,12,5,'#ff4466');
-    px(x+3,y+3,2,2,'#ffaacc'); px(x+7,y+3,2,2,'#ffaacc');
-    px(a?x+1:x, y+7, a?10:12, 2, '#cc2244');
+function rndSym(){
+  let r=Math.random()*WTOTAL;
+  for(let i=0;i<SYMS.length;i++){r-=WEIGHTS[i];if(r<=0)return SYMS[i];}
+  return SYMS[0];
+}
+
+/* ══════════════════════════════════
+   SPIN — VISIBLE ROLL ANIMATION
+══════════════════════════════════ */
+function doSpin(user, bet){
+  if(spinning) return;
+  spinning=true;
+  document.getElementById('spinBtn').disabled=true;
+
+  bet=Math.min(CFG.maxBet, Math.max(CFG.minBet, bet||CFG.basePrice));
+
+  const bal=getBal(user);
+  if(bal<bet){
+    log(`❌ ${user}: недостатньо балансу (${bal}pt)`);
+    spinning=false; document.getElementById('spinBtn').disabled=false;
+    return;
+  }
+  setBal(user, bal-bet);
+  st.spins++;
+  updStats();
+
+  document.getElementById('spUser').textContent=user.slice(0,12);
+  document.getElementById('spBet').textContent=`${bet}pt`;
+  document.getElementById('spBal').textContent=getBal(user);
+  log(`🎰 ${user} ставить ${bet}pt...`);
+
+  const results=[rndSym(),rndSym(),rndSym()];
+  const stagger=[0,340,680];
+  const proms=results.map((sym,r)=>new Promise(res=>setTimeout(()=>rollReel(r,sym,res),stagger[r])));
+
+  Promise.all(proms).then(()=>{
+    spinning=false;
+    document.getElementById('spinBtn').disabled=false;
+    checkWin(results,user,bet);
+  });
+}
+
+function rollReel(r, finalSym, done){
+  const rs=document.getElementById(`rs${r}`);
+  const cells=rs.querySelectorAll('.sym');
+  const duration=800+r*220; // ms
+
+  /* fill strip: random symbols, put finalSym at CENTRE */
+  cells.forEach((c,i)=>c.textContent = i===CENTRE ? finalSym : rndSym());
+
+  /* START: push strip UP so it appears to scroll DOWN into place
+     We start from CENTRE-4 (4 rows above final) */
+  const startIdx=CENTRE-5;
+  const endIdx=CENTRE;
+  const startY=165-(startIdx*SYM_H+SYM_H/2);
+  const endY  =165-(endIdx  *SYM_H+SYM_H/2);
+
+  rs.style.transition='none';
+  rs.style.transform=`translateY(${startY}px)`;
+  rs.getBoundingClientRect(); // force reflow
+
+  /* blur during spin */
+  rs.style.filter='blur(4px)';
+  setTimeout(()=>{ rs.style.filter='blur(0)'; }, duration-90);
+
+  /* animate */
+  rs.style.transition=`transform ${duration}ms cubic-bezier(0.22,0.61,0.36,1)`;
+  rs.style.transform=`translateY(${endY}px)`;
+
+  setTimeout(done, duration+40);
+}
+
+/* ══════════════════════════════════
+   CHECK WIN
+══════════════════════════════════ */
+function checkWin(res, user, bet){
+  const key=res.join('');
+  const w=PAY[key];
+
+  if(w){
+    st.wins++; if(w.jackpot)st.jk++;
+    updStats();
+    const prize=bet*w.mult;
+    setBal(user, getBal(user)+prize);
+    document.getElementById('spBal').textContent=getBal(user);
+    document.getElementById('spWin').textContent=`+${prize}pt`;
+
+    for(let r=0;r<3;r++){
+      const rc=document.getElementById(`rc${r}`);
+      rc.classList.add('wg');
+      setTimeout(()=>rc.classList.remove('wg'),1500);
+    }
+
+    const wb=document.getElementById('wb');
+    wb.textContent=w.jackpot?`🏆 JACKPOT! x${w.mult}`:`✨ ${w.name}! x${w.mult} (+${prize}pt)`;
+    wb.classList.add('show');
+    setTimeout(()=>wb.classList.remove('show'),4500);
+
+    log(`🏆 ${user}: ${res.join(' ')} → ${w.name} x${w.mult} = +${prize}pt!`);
+    sbSend({event:'slot_win',user,result:res.join(' '),mult:w.mult,prize,jackpot:!!w.jackpot,balance:getBal(user)});
+
+    if(w.jackpot) trigJK(user);
   } else {
-    px(x+3,y,6,2,'#ffcc00'); px(x+1,y+2,10,4,'#ffcc00');
-    px(x+2,y+3,2,2,'#fff0aa'); px(x+8,y+3,2,2,'#fff0aa');
-    px(a?x+2:x+1, y+6, a?8:10, 2, '#cc9900');
+    document.getElementById('spWin').textContent='—';
+    log(`💀 ${user}: ${res.join(' ')} — немає виграшу`);
+    sbSend({event:'slot_loss',user,result:res.join(' '),balance:getBal(user)});
   }
+  sbSend({event:'slot_spin_done',user,result:res.join(' '),win:!!w,balance:getBal(user)});
 }
 
-function drawBullet(b) { px(b.x,b.y,2,8, b.player?'#00ffcc':'#ff3366'); }
-
-function drawStars() {
-  for (const s of stars) {
-    ctx.fillStyle = s.s===2 ? '#1a2a3a' : '#0f1a25';
-    ctx.fillRect(~~s.x, ~~s.y, s.s, s.s);
-  }
+function updStats(){
+  document.getElementById('ss').textContent=st.spins;
+  document.getElementById('sw').textContent=st.wins;
+  document.getElementById('sj').textContent=st.jk;
 }
 
-function drawHUD() {
-  ctx.font = 'bold 13px "Courier New"';
-  ctx.fillStyle = '#00ffa3';
-  ctx.fillText('SCORE: '+score, 10, 18);
-  ctx.fillStyle = '#556677';
-  ctx.fillText('HI: '+hiScore, W/2-25, 18);
-  ctx.fillStyle = '#ff4466';
-  ctx.fillText('WAVE '+wave, W-75, 18);
-  for (let i=0; i<lives; i++) {
-    px(10+i*20, 26, 12, 8, '#00aa77');
-    px(12+i*20, 24, 8, 2, '#00ffa3');
-    px(16+i*20, 24, 2, 4, '#00ffa3');
-  }
+/* ══════════════════════════════════
+   JACKPOT
+══════════════════════════════════ */
+function trigJK(user){
+  document.getElementById('jkuser').textContent=user;
+  document.getElementById('jkov').classList.add('show');
+  for(let i=0;i<55;i++) setTimeout(spawnCoin, i*65);
+  setTimeout(closeJK,13000);
+}
+function closeJK(){ document.getElementById('jkov').classList.remove('show'); }
+function spawnCoin(){
+  const c=document.createElement('div'); c.className='coin';
+  c.textContent=['🪙','💰','⭐','💎','🔔'][Math.floor(Math.random()*5)];
+  c.style.left=Math.random()*100+'vw';
+  c.style.setProperty('--d',(1.4+Math.random()*2.4)+'s');
+  c.style.setProperty('--r',(360+Math.random()*720)+'deg');
+  document.body.appendChild(c);
+  setTimeout(()=>c.remove(),5000);
 }
 
-// ─── Particles ────────────────────────────────────────────────────
-function spawnParticles(x,y,col,n) {
-  for (let i=0; i<n; i++) {
-    const a=Math.random()*Math.PI*2, sp=Math.random()*2.5+0.5;
-    particles.push({ x, y, vx:Math.cos(a)*sp, vy:Math.sin(a)*sp, life:25+Math.random()*20, col });
-  }
+/* ══════════════════════════════════
+   LOG STRIP
+══════════════════════════════════ */
+const logQ=[]; let logBusy=false;
+function log(msg){
+  logQ.push(msg);
+  if(!logBusy) nextLog();
+}
+function nextLog(){
+  if(!logQ.length){logBusy=false;return;}
+  logBusy=true;
+  const el=document.getElementById('logtext');
+  el.style.opacity='0';
+  setTimeout(()=>{el.textContent=logQ.shift();el.style.opacity='1';setTimeout(nextLog,3200);},200);
 }
 
-// ─── Chat commands handler ────────────────────────────────────────
-function handleChatCommand(username, message) {
-  const msg = message.toLowerCase().trim();
-  addChatLine(username, message, true);
+/* ══════════════════════════════════
+   STREAMER.BOT WEBSOCKET — AUTO-CONNECT + AUTO-RECONNECT
+══════════════════════════════════ */
+function connect(){
+  if(ws){ try{ws.close();}catch(_){} }
+  setUI('cx','Підключення...');
 
-  // !play — стартує або рестартує гру з будь-якого стану
-  if (msg === '!play') {
-    initGame(); state = 'play'; enemyDir = 1;
-    addLog('>> '+username+' запустив гру!', 'ok');
+  ws=new WebSocket(`ws://${CFG.host}:${CFG.port}/`);
+
+  ws.onopen=()=>{
+    wsOk=true; clearTimeout(reconn);
+    setUI('on','Підключено ✓');
+    log('⚡ Streamer.bot підключено!');
+    // subscribe to chat + custom events
+    ws.send(JSON.stringify({
+      request:'Subscribe', id:'slots-1',
+      events:{ Twitch:['ChatMessage'], General:['Custom'] }
+    }));
+  };
+
+  ws.onmessage=e=>{ try{handleSB(JSON.parse(e.data));}catch(_){} };
+
+  ws.onerror=()=>setUI('err','Помилка з\'єднання');
+
+  ws.onclose=()=>{
+    wsOk=false;
+    setUI('','Відключено — повтор...');
+    log('🔌 З\'єднання закрито, перепідключення...');
+    reconn=setTimeout(connect, CFG.reconnMs);
+  };
+}
+
+function setUI(cls, label){
+  const d=document.getElementById('cdot');
+  d.className=cls;
+  document.getElementById('clabel').textContent=label;
+}
+
+/* ══════════════════════════════════
+   HANDLE STREAMER.BOT EVENTS
+══════════════════════════════════ */
+function handleSB(data){
+  const type=data?.event?.type;
+  const ev=data?.data;
+
+  /* Chat message */
+  if(type==='ChatMessage'){
+    const msg=(ev?.message||ev?.rawInput||'').trim();
+    const user=ev?.display_name||ev?.username||'viewer';
+    parseCmd(msg, user);
     return;
   }
 
-  if (state !== 'play') {
-    addLog('-- гра не активна. Напиши !play', 'inf');
+  /* Custom event / DoAction payload */
+  if(type==='Custom'||data?.source==='Slots'){
+    const cmd=ev?.command||data?.command||'';
+    const user=ev?.user||data?.user||'viewer';
+    const arg=parseInt(ev?.arg||data?.arg||'0')||CFG.basePrice;
+    if(cmd==='spin')    doSpin(user,arg);
+    if(cmd==='balance') showBalance(user);
+    if(cmd==='reset')   resetAll();
     return;
   }
 
-  if (msg === '!left')  { player.x = Math.max(0, player.x - 48); addLog('<- '+username+' вліво','cmd'); }
-  else if (msg === '!right') { player.x = Math.min(W-player.w, player.x + 48); addLog('-> '+username+' вправо','cmd'); }
-  else if (msg === '!shoot') {
-    bullets.push({ x:player.x+7, y:player.y-8, vy:-7, player:true });
-    addLog('** '+username+' вогонь!','cmd');
-  }
-  else if (msg === '!boss') {
-    enemies.push({ x:Math.random()*(W-20)+10, y:60, w:14, h:12, t:'boss', hp:5, alive:true, anim:0 });
-    addLog('!! '+username+' спавн боса','cmd');
-  }
-  else if (msg === '!heal') {
-    lives = Math.min(lives+1, 5);
-    addLog('++ '+username+' +1 жизнь','cmd');
-  }
-  else if (msg === '!chaos') {
-    chaosTimer = 180;
-    addLog('!! '+username+' CHAOS!','cmd');
+  /* Direct object format */
+  if(data?.command){
+    const user=data.user||'viewer';
+    const arg=parseInt(data.arg||'0')||CFG.basePrice;
+    if(data.command==='spin')    doSpin(user,arg);
+    if(data.command==='balance') showBalance(user);
+    if(data.command==='reset')   resetAll();
   }
 }
 
-// ─── Streamer.bot WebSocket — авто-підключення ────────────────────
-let ws = null;
-let wsReconnectTimer = null;
-const WS_HOST = 'ws://127.0.0.1';
-const WS_PORT = '8080';
-
-function connectSB() {
-  const host = (document.getElementById('sbHost')?.value || WS_HOST).trim();
-  const port = (document.getElementById('sbPort')?.value || WS_PORT).trim();
-  const url  = host + ':' + port + '/';
-
-  if (ws && (ws.readyState === 0 || ws.readyState === 1)) return; // вже підключено/підключається
-
-  setSBStatus(false, 'Connecting...');
-  addLog('Підключення до '+url+'...', 'inf');
-
-  try {
-    ws = new WebSocket(url);
-
-    ws.onopen = () => {
-      setSBStatus(true, 'Online');
-      addLog('Підключено до Streamer.bot!', 'ok');
-      ws.send(JSON.stringify({ request: 'Subscribe', id: 'game-sub', events: { Twitch: ['ChatMessage'] } }));
-      if (wsReconnectTimer) { clearTimeout(wsReconnectTimer); wsReconnectTimer = null; }
-    };
-
-    ws.onclose = () => {
-      setSBStatus(false, 'Offline');
-      addLog('З\'єднання закрито. Перепідключення через 3с...', 'err');
-      ws = null;
-      wsReconnectTimer = setTimeout(connectSB, 3000);
-    };
-
-    ws.onerror = () => {
-      setSBStatus(false, 'Error');
-      addLog('Помилка WS. Повтор...', 'err');
-    };
-
-    ws.onmessage = (e) => {
-      try {
-        const d = JSON.parse(e.data);
-
-        addLog('RAW: '+e.data.slice(0,180), 'inf');
-
-        let msg = '', user = '';
-
-        // Streamer.bot v0.2+ — {msgId, event:{type,source}, data:{...}}
-        if (d.msgId !== undefined) {
-          const ev = d?.event?.type || '';
-          if (ev === 'ChatMessage' || ev === 'Message') {
-            const m = d?.data?.message;
-            msg  = typeof m === 'string' ? m : (m?.message || m?.text || '');
-            user = d?.data?.displayName || d?.data?.username
-                || d?.data?.message?.displayName || d?.data?.message?.username || 'viewer';
-          }
-        }
-        // Streamer.bot v0.1
-        else if (d?.event?.type === 'ChatMessage' || d?.event?.type === 'Message') {
-          const m = d?.data?.message;
-          msg  = typeof m === 'string' ? m : (m?.message || '');
-          user = d?.data?.displayName || d?.data?.username || 'viewer';
-        }
-        // Fallback
-        else if (typeof d?.data?.rawInput === 'string') {
-          msg  = d.data.rawInput;
-          user = d?.data?.displayName || d?.data?.username || 'viewer';
-        }
-
-        const txt = msg.trim();
-        if (txt) {
-          if (txt.startsWith('!')) handleChatCommand(user, txt);
-          else addChatLine(user, txt, false);
-        }
-      } catch(ex) { addLog('Parse err: '+ex.message, 'err'); }
-    };
-
-  } catch(ex) {
-    setSBStatus(false, 'Error');
-    addLog('Не вдалось: '+ex.message, 'err');
-    wsReconnectTimer = setTimeout(connectSB, 3000);
+/* ── Parse raw chat command ── */
+function parseCmd(msg, user){
+  const lo=msg.toLowerCase().trim();
+  if(lo.startsWith('!spin')){
+    const parts=msg.split(/\s+/);
+    const bet=parseInt(parts[1])||CFG.basePrice;
+    doSpin(user,bet);
+  } else if(lo==='!balance'){
+    showBalance(user);
   }
 }
 
-function setSBStatus(on, text) {
-  document.getElementById('sbDot').className = 'dot' + (on?' on':'');
-  document.getElementById('sbStatusText').textContent = text;
+function showBalance(user){
+  const b=getBal(user);
+  log(`💰 ${user}: баланс = ${b}pt`);
+  sbSend({event:'balance_check',user,balance:b});
 }
 
-function addLog(msg, type='') {
-  const el = document.getElementById('sbLog');
-  const d = document.createElement('div');
-  d.className = type;
-  const ts = new Date().toLocaleTimeString('uk-UA',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
-  d.textContent = '['+ts+'] '+msg;
-  el.appendChild(d);
-  if (el.children.length > 40) el.removeChild(el.children[0]);
-  el.scrollTop = el.scrollHeight;
+function sbSend(payload){
+  if(!wsOk||!ws||ws.readyState!==1) return;
+  try{ ws.send(JSON.stringify({request:'DoAction',action:{name:'SlotEvent'},args:payload})); }
+  catch(_){}
 }
 
-function addChatLine(user, msg, isCmd) {
-  const el = document.getElementById('chatFeed');
-  const d = document.createElement('div');
-  d.className = 'chat-msg' + (isCmd?' active':'');
-  d.innerHTML = '<span>'+user+':</span> '+msg.slice(0,40);
-  el.appendChild(d);
-  if (el.children.length > 30) el.removeChild(el.children[0]);
-  el.scrollTop = el.scrollHeight;
+/* ══════════════════════════════════
+   LOCAL (manual) SPIN + KEYBOARD
+══════════════════════════════════ */
+function localSpin(){ doSpin('Стрімер', CFG.basePrice); }
+
+function resetAll(){
+  st.spins=0;st.wins=0;st.jk=0;updStats();
+  log('🔄 Статистику скинуто');
 }
 
-
-
-// ─── Update ───────────────────────────────────────────────────────
-function update() {
-  for (const s of stars) { s.y += s.sp; if (s.y > H) { s.y=0; s.x=Math.random()*W; } }
-
-  if (state === 'title') {
-    if (keys[' ']) { keys[' ']=false; initGame(); state='play'; }
-    return;
-  }
-  if (state === 'gameover') {
-    if (keys['r'] || keys[' ']) { keys['r']=false; keys[' ']=false; initGame(); state='play'; }
-    return;
-  }
-  if (state === 'winclear') {
-    waveTimer--;
-    if (waveTimer <= 0) { wave++; spawnWave(); state='play'; enemyDir=1; }
-    return;
-  }
-
-  if (player.inv > 0) player.inv--;
-
-  // Keyboard control
-  if (keys['ArrowLeft'])  player.x = Math.max(0, player.x - 3.5);
-  if (keys['ArrowRight']) player.x = Math.min(W-player.w, player.x + 3.5);
-  if (keys[' '] && Date.now()-lastShot > 180) {
-    bullets.push({ x:player.x+7, y:player.y-8, vy:-7, player:true });
-    lastShot = Date.now();
-  }
-
-  // Bullets
-  for (const b of bullets) b.y += b.vy;
-  for (const b of ebullets) { b.y += b.vy; b.x += (b.vx||0); }
-  for (const p of particles) { p.x+=p.vx; p.y+=p.vy; p.life--; }
-  for (const e of enemies) e.anim++;
-
-  // Chaos mode — bullet rain
-  if (chaosTimer > 0) {
-    chaosTimer--;
-    if (Math.random() < 0.4) {
-      ebullets.push({ x:Math.random()*W, y:0, vy:3+Math.random()*2, vx:(Math.random()-0.5)*1.5, player:false });
-    }
-  }
-
-  // Enemy movement
-  eMoveTimer++;
-  const interval = Math.max(8, 22-wave*2);
-  if (eMoveTimer > interval) {
-    eMoveTimer = 0;
-    let hitWall = false;
-    for (const e of enemies) {
-      if (!e.alive) continue;
-      e.x += enemyDir * 12;
-      if (e.x < 0 || e.x+e.w > W) hitWall = true;
-    }
-    if (hitWall) {
-      enemyDir *= -1;
-      for (const e of enemies) if (e.alive) e.y += 14;
-    }
-  }
-
-  // Enemy shooting
-  eShootTimer++;
-  if (eShootTimer > Math.max(35, 80-wave*6)) {
-    eShootTimer = 0;
-    const alive = enemies.filter(e=>e.alive);
-    if (alive.length) {
-      const s = alive[~~(Math.random()*alive.length)];
-      const sp = 1.8 + wave*0.25;
-      ebullets.push({ x:s.x+5, y:s.y+10, vy:sp, vx:(Math.random()-0.5)*1.5, player:false });
-    }
-  }
-
-  // Bullet vs enemy
-  for (const b of bullets) {
-    if (b.y < -10) continue;
-    for (const e of enemies) {
-      if (!e.alive) continue;
-      if (b.x>e.x && b.x<e.x+e.w && b.y>e.y && b.y<e.y+e.h) {
-        b.y = -999;
-        e.hp--;
-        spawnParticles(e.x+6, e.y+5, e.t==='boss'?'#cc33ff':e.t==='med'?'#ff4466':'#ffcc00', 5);
-        if (e.hp <= 0) {
-          e.alive = false;
-          score += e.t==='boss'?50:e.t==='med'?30:10;
-          if (score > hiScore) hiScore = score;
-          spawnParticles(e.x+6, e.y+5, e.t==='boss'?'#ff88ff':'#ffaa00', 14);
-        }
-      }
-    }
-  }
-
-  // Enemy bullet vs player
-  if (player.inv === 0) {
-    for (const b of ebullets) {
-      if (b.y > H) continue;
-      if (b.x>player.x && b.x<player.x+player.w && b.y>player.y && b.y<player.y+player.h) {
-        b.y = 9999; lives--; player.inv = 80;
-        spawnParticles(player.x+8, player.y+8, '#00ffa3', 12);
-        if (lives <= 0) { state='gameover'; if(score>hiScore)hiScore=score; return; }
-      }
-    }
-    for (const e of enemies) {
-      if (!e.alive) continue;
-      if (e.y+e.h > player.y && e.x < player.x+player.w && e.x+e.w > player.x) {
-        lives = 0; state='gameover'; return;
-      }
-    }
-  }
-
-  // Cleanup
-  bullets.splice(0, bullets.length, ...bullets.filter(b=>b.y>-20&&b.y<H+20));
-  ebullets.splice(0, ebullets.length, ...ebullets.filter(b=>b.y>-20&&b.y<H+20&&b.x>-10&&b.x<W+10));
-  particles.splice(0, particles.length, ...particles.filter(p=>p.life>0));
-
-  if (enemies.filter(e=>e.alive).length === 0) { state='winclear'; waveTimer=100; }
-}
-
-// ─── Draw ─────────────────────────────────────────────────────────
-function draw() {
-  ctx.fillStyle = '#05080f';
-  ctx.fillRect(0,0,W,H);
-  drawStars();
-
-  if (state === 'title') {
-    ctx.textAlign='center';
-    ctx.font='bold 34px "Courier New"';
-    ctx.fillStyle='#00ffa3';
-    ctx.fillText('PIXEL INVADERS', W/2, 130);
-    ctx.font='12px "Courier New"';
-    ctx.fillStyle='#4488ff';
-    ctx.fillText('CHAT PLAYS', W/2, 155);
-    ctx.font='13px "Courier New"';
-    ctx.fillStyle='#556677';
-    ctx.fillText('Глядачі керують через Twitch чат!', W/2, 200);
-    ctx.fillStyle='#ffcc00';
-    ctx.font='bold 16px "Courier New"';
-    ctx.fillText('ПРОБІЛ — почати', W/2, 260);
-    ctx.font='11px "Courier New"';
-    ctx.fillStyle='#334455';
-    ctx.fillText('HI-SCORE: '+hiScore, W/2, 300);
-    ctx.textAlign='left';
-    const demo=[{x:W/2-120,y:350,t:'boss',anim:Date.now()/16},{x:W/2-60,y:350,t:'med',anim:Date.now()/16+10},{x:W/2,y:350,t:'grunt',anim:Date.now()/16+5},{x:W/2+60,y:350,t:'med',anim:Date.now()/16+20},{x:W/2+120,y:350,t:'boss',anim:Date.now()/16+30}];
-    for (const e of demo) drawEnemy(e);
-    return;
-  }
-
-  for (const b of bullets) drawBullet(b);
-  for (const b of ebullets) drawBullet(b);
-  for (const e of enemies) if (e.alive) drawEnemy(e);
-
-  if (player.inv===0 || ~~(player.inv/6)%2===0) drawShip(player.x, player.y);
-
-  // Particles
-  for (const p of particles) {
-    ctx.globalAlpha = Math.max(0, p.life/45);
-    px(p.x, p.y, 2, 2, p.col);
-    ctx.globalAlpha = 1;
-  }
-
-  // Chaos overlay
-  if (chaosTimer > 0) {
-    ctx.fillStyle = 'rgba(255,50,100,0.04)';
-    ctx.fillRect(0,0,W,H);
-    ctx.font='bold 11px "Courier New"';
-    ctx.fillStyle='#ff3366';
-    ctx.textAlign='right';
-    ctx.fillText('CHAOS MODE', W-8, H-8);
-    ctx.textAlign='left';
-  }
-
-  drawHUD();
-
-  if (state === 'gameover') {
-    ctx.fillStyle='rgba(5,8,15,0.75)';
-    ctx.fillRect(0,0,W,H);
-    ctx.textAlign='center';
-    ctx.font='bold 30px "Courier New"';
-    ctx.fillStyle='#ff4466';
-    ctx.fillText('GAME OVER', W/2, 190);
-    ctx.font='15px "Courier New"';
-    ctx.fillStyle='#aabbcc';
-    ctx.fillText('Рахунок: '+score, W/2, 235);
-    if (score>=hiScore && score>0) { ctx.fillStyle='#ffcc00'; ctx.fillText('НОВИЙ РЕКОРД!', W/2, 265); }
-    ctx.fillStyle='#00ffa3';
-    ctx.font='12px "Courier New"';
-    ctx.fillText('R або ПРОБІЛ — знову', W/2, 310);
-    ctx.textAlign='left';
-  }
-
-  if (state === 'winclear') {
-    ctx.fillStyle='rgba(5,8,15,0.6)';
-    ctx.fillRect(0,0,W,H);
-    ctx.textAlign='center';
-    ctx.font='bold 26px "Courier New"';
-    ctx.fillStyle='#ffcc00';
-    ctx.fillText('ХВИЛЯ '+wave+' ПРОЙДЕНА!', W/2, 210);
-    ctx.font='13px "Courier New"';
-    ctx.fillStyle='#00ffa3';
-    ctx.fillText('Готуйся до наступної...', W/2, 260);
-    ctx.textAlign='left';
-  }
-}
-
-// ─── Loop ─────────────────────────────────────────────────────────
-function loop() { update(); draw(); requestAnimationFrame(loop); }
-
-window.addEventListener('keydown', e => {
-  keys[e.key] = true;
-  if ([' ','ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)) e.preventDefault();
+document.addEventListener('keydown',e=>{
+  if(e.code==='Space'&&!spinning){e.preventDefault();localSpin();}
 });
-window.addEventListener('keyup', e => { keys[e.key] = false; });
 
-initStars();
-loop();
-connectSB(); // авто-підключення при старті
+/* ══════════════════════════════════
+   PAYTABLE
+══════════════════════════════════ */
+function buildPT(){
+  const pt=document.getElementById('paytable');
+  pt.innerHTML='';
+  Object.entries(PAY).forEach(([combo,info])=>{
+    const d=document.createElement('div'); d.className='pe';
+    d.innerHTML=`<span class="es">${combo}</span><span class="em">x${info.mult}</span>`;
+    pt.appendChild(d);
+  });
+}
+
+/* ══════════════════════════════════
+   INIT
+══════════════════════════════════ */
+function init(){
+  document.getElementById('cPrice').textContent=`${CFG.basePrice}pt`;
+  document.getElementById('cMin').textContent=CFG.minBet;
+  document.getElementById('cMax').textContent=CFG.maxBet;
+  initReels();
+  buildPT();
+  connect();
+  log('🎰 Stream Slots готовий!  !spin · !spin [ставка] · !balance');
+}
+
+init();
 </script>
 </body>
 </html>
