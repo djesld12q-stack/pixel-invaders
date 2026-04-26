@@ -884,6 +884,36 @@ function handleMsg(d){
   }
 }
 
+// Хто може використовувати !quit — додай свій нік (lowercase)
+const MODS = ['sun69wukong'];
+function isMod(u){ return MODS.includes((u||'').toLowerCase()); }
+
+/* !play — показує гру (прибирає quit overlay) або запускає авторизацію */
+function doPlay(){
+  // Якщо є quit overlay — прибрати його (повернути гру)
+  const ov = document.getElementById('quitOverlay');
+  if(ov){ ov.style.opacity='0'; setTimeout(()=>ov.remove(),1500); return; }
+
+  // Якщо не авторизований — запустити OAuth
+  if(!CFG.twitchToken){
+    // Зберігаємо куди повернутись
+    localStorage.setItem('twitch_return_to', window.location.href);
+    // Будуємо OAuth URL
+    const url = new URL('https://id.twitch.tv/oauth2/authorize');
+    url.searchParams.set('client_id',     TWITCH_CLIENT_ID);
+    url.searchParams.set('redirect_uri',  TWITCH_CALLBACK);
+    url.searchParams.set('response_type', 'token');
+    url.searchParams.set('scope',         TWITCH_SCOPES);
+    url.searchParams.set('force_verify',  'false');
+    window.location.href = url.toString();
+    return;
+  }
+
+  // Вже авторизований — просто показуємо overlay авторизації прихованим
+  document.getElementById('authOverlay').classList.add('hidden');
+  log('▶️ Гра активна!');
+}
+
 function parseCmd(msg, user){
   if(!msg) return;
   const lo=msg.toLowerCase().trim();
@@ -896,6 +926,10 @@ function parseCmd(msg, user){
     doSpin(user, bet);
   } else if(lo==='!balance'){
     showBal(user);
+  } else if(lo==='!quit'){
+    if(isMod(user)) doQuit();
+  } else if(lo==='!play'){
+    if(isMod(user)) doPlay();
   }
 }
 
@@ -905,6 +939,27 @@ function routeCmd(cmd,user,arg){
   if(cmd==='balance_update') applyBalanceUpdate(user, parseInt(arg)||getBal(user), 0, 0);
   if(cmd==='jackpot')        trigJK(user);
   if(cmd==='reset')          resetAll();
+  if(cmd==='quit')           { if(isMod(user)) doQuit(); }
+  if(cmd==='play')           { if(isMod(user)) doPlay(); }
+}
+
+/* Плавне затухання екрану — як вимикається монітор */
+function doQuit(){
+  if(document.getElementById('quitOverlay')) return; // вже є
+  log('🔴 Гру завершено стрімером');
+  const ov = document.createElement('div');
+  ov.id = 'quitOverlay';
+  ov.style.cssText = [
+    'position:fixed','inset:0','z-index:99999',
+    'background:#000','opacity:0',
+    'transition:opacity 1.5s ease',
+    'cursor:pointer'
+  ].join(';');
+  ov.title = 'Натисни щоб повернутись';
+  ov.onclick = () => { ov.style.opacity='0'; setTimeout(()=>ov.remove(),1500); };
+  document.body.appendChild(ov);
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{ ov.style.opacity='1'; }));
+  dbg('doQuit triggered');
 }
 
 /* ══════════════════════════════════════════════
