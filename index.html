@@ -4,21 +4,35 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>🎰 Stream Slots</title>
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Share+Tech+Mono&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Share+Tech+Mono&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
 <style>
-:root {
-  --gold:  #FFD700;
-  --gold2: #FFA500;
-  --gold3: #8B6914;
-  --dark:  #060402;
-  --panel: #100c06;
+/*
+  ═══════════════════════════════════════════════
+  STREAMER.BOT WEBSOCKET API FORMAT (v0.1.4):
+  Вхідні події мають формат:
+  {
+    "timeStamp": "...",
+    "event": { "source": "Twitch", "type": "ChatMessage" },
+    "data": {
+      "message": { "message": "!spin 50", ... },
+      "user": { "display": "username", ... }
+    }
+  }
+  ═══════════════════════════════════════════════
+*/
+:root{
+  --gold:#FFD700;
+  --gold2:#FFA500;
+  --gold3:#8B6914;
+  --neon:#ff8800;
+  --green:#00ff88;
+  --dark:#070502;
+  --panel:#100d05;
   --border:#3a2a08;
-  --bord2: #5a4010;
-  --neon:  #ff8800;
-  --green: #00ff88;
-  --text:  #f0e0b0;
-  --dim:   #7a6a40;
-  --symH:  110px;
+  --bord2:#5a4010;
+  --dim:#7a6a3a;
+  --text:#f0e0b0;
+  --SH:116px; /* symbol cell height */
 }
 *{margin:0;padding:0;box-sizing:border-box;}
 html,body{
@@ -28,132 +42,148 @@ html,body{
   color:var(--text);
   display:flex;align-items:center;justify-content:center;
 }
-.bg{
-  position:fixed;inset:0;pointer-events:none;
+
+/* bg glow */
+body::before{
+  content:'';position:fixed;inset:0;pointer-events:none;
   background:
-    radial-gradient(ellipse 70% 40% at 50% 110%,rgba(200,100,0,.08),transparent 70%),
-    radial-gradient(ellipse 50% 20% at 50% -10%,rgba(255,180,0,.05),transparent 60%);
-}
-.scan{
-  position:fixed;inset:0;pointer-events:none;z-index:9000;
-  background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,.06) 3px,rgba(0,0,0,.06) 4px);
+    radial-gradient(ellipse 70% 50% at 50% 100%,rgba(180,90,0,.09),transparent 70%),
+    radial-gradient(ellipse 50% 25% at 50% 0%,rgba(255,160,0,.05),transparent 60%);
 }
 
-/* ── APP SHELL ── */
-.app{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;}
+/* scanlines */
+body::after{
+  content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;
+  background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,.055) 3px,rgba(0,0,0,.055) 4px);
+}
+
+/* ── MAIN ── */
+.app{
+  display:flex;flex-direction:column;align-items:center;
+  position:relative;z-index:1;
+}
 
 /* ── MARQUEE ── */
-.mq-wrap{
-  width:720px;overflow:hidden;
+.mq{
+  width:760px;overflow:hidden;
   background:linear-gradient(90deg,#080500,#160f02,#080500);
-  border:1px solid var(--bord2);border-bottom:none;
-  border-radius:6px 6px 0 0;padding:3px 0;
+  border:1px solid var(--bord2);border-bottom:none;border-radius:6px 6px 0 0;
+  padding:4px 0;
 }
-.mq-inner{
-  display:inline-flex;gap:48px;white-space:nowrap;
-  animation:mq 20s linear infinite;
+.mqi{
+  display:inline-flex;gap:56px;white-space:nowrap;
+  animation:mq 22s linear infinite;
   font-family:'Bebas Neue',sans-serif;font-size:12px;letter-spacing:.22em;color:var(--gold2);
 }
-.mq-inner span{color:var(--dim);}
+.mqi s{color:var(--dim);text-decoration:none;}
 @keyframes mq{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
 
-/* ── TITLE BAR ── */
-.title-bar{
-  width:720px;
+/* ── TITLE ── */
+.titlebar{
+  width:760px;
   background:linear-gradient(180deg,#1e1500,#110e00);
   border:2px solid var(--bord2);border-top:3px solid var(--gold3);border-bottom:none;
-  padding:10px 24px 8px;
+  padding:10px 22px 8px;
   display:flex;align-items:center;justify-content:space-between;
 }
-.title-main{
-  font-family:'Bebas Neue',sans-serif;font-size:44px;letter-spacing:.22em;line-height:1;
+.title{
+  font-family:'Bebas Neue',sans-serif;font-size:46px;letter-spacing:.22em;line-height:1;
   color:var(--gold);
-  text-shadow:0 0 22px rgba(255,215,0,.7),0 0 60px rgba(255,140,0,.3),0 2px 0 #6b4e00,0 3px 0 #4a3600;
+  text-shadow:0 0 24px rgba(255,215,0,.7),0 0 60px rgba(255,140,0,.3),0 2px 0 #6b4e00,0 3px 0 #4a3600;
 }
-.title-main em{color:var(--neon);font-style:normal;text-shadow:0 0 20px rgba(255,136,0,.8);}
-.title-sub{font-family:'Bebas Neue',sans-serif;font-size:10px;letter-spacing:.35em;color:var(--dim);margin-top:3px;}
-.conn-col{display:flex;flex-direction:column;align-items:flex-end;gap:5px;}
-.conn-row{display:flex;align-items:center;gap:7px;font-size:12px;letter-spacing:.08em;color:var(--dim);}
-#cdot{width:9px;height:9px;border-radius:50%;background:#333;flex-shrink:0;transition:background .4s,box-shadow .4s;}
-#cdot.on {background:var(--green);box-shadow:0 0 8px var(--green);}
-#cdot.err{background:#ff3333;box-shadow:0 0 8px #ff3333;}
-#cdot.cx {background:var(--gold2);box-shadow:0 0 8px var(--gold2);animation:blk .6s infinite alternate;}
-@keyframes blk{from{opacity:1}to{opacity:.2}}
-#clabel{font-size:11px;}
-.conn-addr{font-family:'Share Tech Mono',monospace;font-size:10px;color:#2e2510;letter-spacing:.1em;}
+.title em{color:var(--neon);font-style:normal;}
+.title-sub{font-size:10px;letter-spacing:.32em;color:var(--dim);margin-top:3px;font-family:'Bebas Neue',sans-serif;}
 
-/* ── MACHINE BODY ── */
+/* connection badge */
+.cbadge{display:flex;flex-direction:column;align-items:flex-end;gap:4px;}
+.crow{display:flex;align-items:center;gap:7px;font-size:11px;letter-spacing:.08em;color:var(--dim);}
+#dot{
+  width:10px;height:10px;border-radius:50%;background:#2a2010;flex-shrink:0;
+  transition:background .4s,box-shadow .4s;
+}
+#dot.on {background:var(--green);box-shadow:0 0 8px var(--green);}
+#dot.err{background:#ff3333;box-shadow:0 0 8px #ff3333;}
+#dot.cx {background:var(--gold2);box-shadow:0 0 8px var(--gold2);animation:blk .55s infinite alternate;}
+@keyframes blk{from{opacity:1}to{opacity:.15}}
+.caddr{font-family:'Share Tech Mono',monospace;font-size:10px;color:#2e2510;letter-spacing:.08em;}
+
+/* ── MACHINE ── */
 .machine{
-  width:720px;
-  background:linear-gradient(180deg,#120e04,#08060000);
+  width:760px;
+  background:linear-gradient(180deg,#130f05,#08060100);
   border:2px solid var(--bord2);border-top:none;
-  padding:18px 28px 22px;
+  padding:16px 26px 20px;
   position:relative;
   box-shadow:inset 0 6px 30px rgba(0,0,0,.7),0 20px 60px rgba(0,0,0,.9);
 }
 
-/* ── REELS ── */
-.reels-frame{
-  position:relative;height:330px;
-  background:#000;border-radius:10px;
-  border:3px solid #1a1200;overflow:hidden;
-  display:flex;
-  box-shadow:inset 0 0 50px rgba(0,0,0,1),0 0 0 1px var(--bord2),0 0 30px rgba(255,140,0,.05);
-}
-
-/* payline stripe */
-.payline{
-  position:absolute;top:50%;left:0;right:0;
-  height:112px;transform:translateY(-50%);
-  border-top:2px solid rgba(255,215,0,.3);
-  border-bottom:2px solid rgba(255,215,0,.3);
-  pointer-events:none;z-index:20;
-}
-.payline::before,.payline::after{
-  content:'◀ PAYLINE ▶';
-  position:absolute;top:50%;transform:translateY(-50%);
-  font-family:'Bebas Neue',sans-serif;font-size:9px;letter-spacing:.2em;
-  color:rgba(255,215,0,.35);
-}
-.payline::before{left:8px;}
-.payline::after{right:8px;}
-
-/* reel column */
-.rc{
-  flex:1;border-right:1px solid #181000;
-  position:relative;overflow:hidden;background:#020100;
-}
-.rc:last-child{border-right:none;}
-.rc::before,.rc::after{
-  content:'';position:absolute;left:0;right:0;height:85px;z-index:10;pointer-events:none;
-}
-.rc::before{top:0;background:linear-gradient(180deg,rgba(0,0,0,.98) 0%,rgba(0,0,0,.55) 60%,transparent 100%);}
-.rc::after {bottom:0;background:linear-gradient(0deg,rgba(0,0,0,.98) 0%,rgba(0,0,0,.55) 60%,transparent 100%);}
-
-.rs{position:absolute;left:0;right:0;top:0;display:flex;flex-direction:column;will-change:transform;}
-
-.sym{
-  height:var(--symH);display:flex;align-items:center;justify-content:center;
-  font-size:66px;flex-shrink:0;user-select:none;
-}
-
-@keyframes wflash{0%,100%{background:transparent}50%{background:rgba(255,215,0,.14);box-shadow:inset 0 0 30px rgba(255,215,0,.2);}}
-.rc.wg{animation:wflash .35s ease-in-out 4;}
-
-/* win banner */
+/* win banner above reels */
 .wb{
-  position:absolute;top:-2px;left:0;right:0;height:36px;z-index:30;
+  position:absolute;top:-1px;left:0;right:0;height:32px;z-index:30;
   display:flex;align-items:center;justify-content:center;
-  font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:.2em;
-  color:var(--gold);text-shadow:0 0 14px rgba(255,215,0,.8);
-  background:linear-gradient(90deg,transparent,rgba(255,190,0,.12),transparent);
+  font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:.22em;
+  color:var(--gold);text-shadow:0 0 12px rgba(255,215,0,.9);
+  background:linear-gradient(90deg,transparent,rgba(255,180,0,.1),transparent);
   opacity:0;transition:opacity .3s;pointer-events:none;
 }
 .wb.show{opacity:1;}
 
+/* ── REELS FRAME ── */
+.rf{
+  height:360px;position:relative;
+  background:#000;border-radius:10px;
+  border:3px solid #1c1400;overflow:hidden;
+  display:flex;
+  box-shadow:inset 0 0 50px rgba(0,0,0,1),0 0 0 1px var(--bord2);
+}
+
+/* payline */
+.pl{
+  position:absolute;top:50%;left:0;right:0;
+  height:118px;transform:translateY(-50%);
+  border-top:2px solid rgba(255,215,0,.28);
+  border-bottom:2px solid rgba(255,215,0,.28);
+  pointer-events:none;z-index:20;
+}
+.pl::before,.pl::after{
+  content:'◀ PAYLINE ▶';
+  position:absolute;top:50%;transform:translateY(-50%);
+  font-family:'Bebas Neue',sans-serif;font-size:9px;letter-spacing:.2em;
+  color:rgba(255,215,0,.3);
+}
+.pl::before{left:8px;}.pl::after{right:8px;}
+
+/* reel column */
+.rc{
+  flex:1;border-right:1px solid #1a1200;
+  position:relative;overflow:hidden;background:#010000;
+}
+.rc:last-child{border-right:none;}
+.rc::before,.rc::after{
+  content:'';position:absolute;left:0;right:0;height:90px;z-index:10;pointer-events:none;
+}
+.rc::before{top:0;background:linear-gradient(180deg,rgba(0,0,0,.98) 0%,rgba(0,0,0,.5) 55%,transparent 100%);}
+.rc::after {bottom:0;background:linear-gradient(0deg,rgba(0,0,0,.98) 0%,rgba(0,0,0,.5) 55%,transparent 100%);}
+
+/* strip */
+.rs{
+  position:absolute;left:0;right:0;top:0;
+  display:flex;flex-direction:column;
+  will-change:transform;
+}
+.sym{
+  height:var(--SH);
+  display:flex;align-items:center;justify-content:center;
+  font-size:68px;flex-shrink:0;user-select:none;
+}
+
+/* win glow on reel */
+@keyframes wf{0%,100%{background:transparent}50%{background:rgba(255,215,0,.13);box-shadow:inset 0 0 28px rgba(255,215,0,.18);}}
+.rc.wg{animation:wf .35s ease-in-out 5;}
+
 /* ── STATS ── */
-.stats-bar{
-  display:flex;margin-top:14px;
+.stats{
+  display:flex;margin-top:12px;
   border:1px solid var(--border);border-radius:6px;overflow:hidden;
 }
 .sc{
@@ -162,77 +192,76 @@ html,body{
   border-right:1px solid var(--border);text-align:center;
 }
 .sc:last-child{border-right:none;}
-.sc .lbl{font-size:10px;letter-spacing:.18em;color:var(--dim);text-transform:uppercase;margin-bottom:2px;}
-.sc .val{font-family:'Bebas Neue',sans-serif;font-size:26px;letter-spacing:.05em;color:var(--gold);line-height:1;text-shadow:0 0 8px rgba(255,215,0,.25);}
-.sc .val.g{color:var(--green);}
-.sc .val.o{color:var(--neon);}
+.sc .l{font-size:9px;letter-spacing:.18em;color:var(--dim);text-transform:uppercase;margin-bottom:1px;}
+.sc .v{font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:.05em;color:var(--gold);line-height:1;}
+.sc .v.g{color:var(--green);} .sc .v.o{color:var(--neon);}
 
 /* ── PRICE ROW ── */
-.price-row{
-  display:flex;align-items:center;justify-content:center;gap:8px;
-  margin-top:13px;font-size:11px;letter-spacing:.12em;color:var(--dim);text-transform:uppercase;
+.pr{
+  display:flex;align-items:center;justify-content:center;
+  gap:8px;margin-top:11px;
+  font-size:11px;letter-spacing:.12em;color:var(--dim);text-transform:uppercase;
 }
 .chip{
-  background:rgba(255,140,0,.1);border:1px solid rgba(255,140,0,.3);border-radius:4px;
-  padding:2px 10px;font-family:'Bebas Neue',sans-serif;font-size:15px;letter-spacing:.08em;color:var(--neon);
+  background:rgba(255,136,0,.1);border:1px solid rgba(255,136,0,.28);border-radius:4px;
+  padding:2px 10px;font-family:'Bebas Neue',sans-serif;font-size:14px;letter-spacing:.08em;color:var(--neon);
 }
 
 /* ── SPIN ROW ── */
-.spin-row{display:flex;align-items:center;justify-content:center;margin-top:15px;gap:24px;}
+.sr{display:flex;align-items:center;justify-content:center;margin-top:14px;gap:22px;}
 
-.side-panel{width:130px;display:flex;flex-direction:column;gap:7px;}
-.sp-cell{
+.sp{width:126px;display:flex;flex-direction:column;gap:7px;}
+.spc{
   background:linear-gradient(135deg,#110d04,#0c0900);
-  border:1px solid var(--border);border-radius:6px;padding:7px 10px;text-align:center;
+  border:1px solid var(--border);border-radius:6px;padding:6px 10px;text-align:center;
 }
-.sp-cell .lbl{font-size:9px;letter-spacing:.15em;color:var(--dim);text-transform:uppercase;}
-.sp-cell .val{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:.05em;color:var(--gold);line-height:1.1;}
+.spc .l{font-size:9px;letter-spacing:.15em;color:var(--dim);text-transform:uppercase;}
+.spc .v{font-family:'Bebas Neue',sans-serif;font-size:21px;color:var(--gold);line-height:1.1;}
 
-.spin-btn{
-  width:116px;height:116px;border-radius:50%;flex-shrink:0;
-  background:radial-gradient(circle at 38% 33%,#ffaa00,#cc5500 48%,#882200 100%);
+/* SPIN BUTTON */
+.sb{
+  width:118px;height:118px;border-radius:50%;flex-shrink:0;
+  background:radial-gradient(circle at 37% 33%,#ffaa00,#cc5500 48%,#882200 100%);
   border:none;outline:none;cursor:pointer;
-  font-family:'Bebas Neue',sans-serif;font-size:25px;letter-spacing:.1em;
+  font-family:'Bebas Neue',sans-serif;font-size:26px;letter-spacing:.1em;
   color:#fff;text-shadow:0 2px 4px rgba(0,0,0,.8);
   position:relative;
-  box-shadow:0 5px 0 #551100,0 9px 0 #330a00,0 12px 30px rgba(220,70,0,.65),0 0 70px rgba(255,100,0,.12);
-  transition:transform .1s,box-shadow .2s;
+  box-shadow:0 5px 0 #551100,0 9px 0 #330a00,0 13px 30px rgba(220,70,0,.65),0 0 70px rgba(255,100,0,.1);
+  transition:transform .1s,box-shadow .15s;
 }
-.spin-btn::before{
+.sb::before{
   content:'';position:absolute;top:9px;left:14px;right:20px;height:38%;
   border-radius:50% 50% 0 0/100% 100% 0 0;
   background:linear-gradient(180deg,rgba(255,255,255,.22),transparent);pointer-events:none;
 }
-.spin-btn:hover:not(:disabled){
+.sb:hover:not(:disabled){
   transform:translateY(-3px);
-  box-shadow:0 8px 0 #551100,0 13px 0 #330a00,0 18px 40px rgba(255,100,0,.75),0 0 90px rgba(255,120,0,.22);
+  box-shadow:0 8px 0 #551100,0 14px 0 #330a00,0 18px 40px rgba(255,100,0,.75),0 0 90px rgba(255,120,0,.2);
 }
-.spin-btn:active:not(:disabled){transform:translateY(5px);box-shadow:0 2px 0 #551100,0 4px 14px rgba(200,60,0,.35);}
-.spin-btn:disabled{opacity:.45;cursor:not-allowed;transform:none;}
+.sb:active:not(:disabled){transform:translateY(5px);box-shadow:0 2px 0 #551100,0 4px 12px rgba(200,60,0,.35);}
+.sb:disabled{opacity:.4;cursor:not-allowed;transform:none;}
 
 /* ── PAYTABLE ── */
-.paytable{
-  width:720px;background:#060400;
+.pt{
+  width:760px;background:#060400;
   border:1px solid var(--border);border-top:none;
   display:flex;flex-wrap:wrap;gap:5px;padding:7px 14px;justify-content:center;
 }
 .pe{
   display:flex;align-items:center;gap:4px;
   background:rgba(255,200,0,.04);border:1px solid var(--border);border-radius:3px;padding:2px 8px;
-  font-size:11px;color:var(--dim);
 }
-.pe .es{font-size:15px;}
-.pe .em{font-family:'Bebas Neue',sans-serif;font-size:14px;color:var(--gold);}
+.pe .es{font-size:14px;}
+.pe .em{font-family:'Bebas Neue',sans-serif;font-size:13px;color:var(--gold);letter-spacing:.04em;}
 
 /* ── LOG ── */
-.log-strip{
-  width:720px;height:27px;overflow:hidden;
+.log{
+  width:760px;height:26px;overflow:hidden;
   background:#050300;border:1px solid var(--border);border-top:none;
-  border-radius:0 0 8px 8px;
-  padding:5px 14px;
+  border-radius:0 0 8px 8px;padding:5px 14px;
   font-family:'Share Tech Mono',monospace;font-size:11px;color:#3a3018;
 }
-#logtext{transition:opacity .2s;}
+#lt{transition:opacity .2s;}
 
 /* ── JACKPOT ── */
 #jkov{
@@ -242,117 +271,119 @@ html,body{
   opacity:0;pointer-events:none;transition:opacity .5s;
 }
 #jkov.show{opacity:1;pointer-events:all;}
-.jkicon{font-size:88px;display:block;animation:jspin 2s linear infinite;}
+.ji{font-size:90px;display:block;animation:jspin 2s linear infinite;}
 @keyframes jspin{to{transform:rotate(360deg)}}
-.jktitle{
-  font-family:'Bebas Neue',sans-serif;font-size:128px;letter-spacing:.2em;line-height:.9;
+.jt{
+  font-family:'Bebas Neue',sans-serif;font-size:130px;letter-spacing:.2em;line-height:.9;
   color:var(--gold);
   text-shadow:0 0 40px rgba(255,215,0,1),0 0 100px rgba(255,165,0,.6),0 0 200px rgba(255,100,0,.3);
-  animation:jpulse .4s ease-in-out infinite alternate;
+  animation:jp .4s ease-in-out infinite alternate;
 }
-@keyframes jpulse{from{transform:scale(1)}to{transform:scale(1.04)}}
-.jkuser{font-family:'Bebas Neue',sans-serif;font-size:50px;color:#fff;letter-spacing:.15em;margin-top:8px;text-shadow:0 0 30px rgba(255,255,255,.4);}
-.jkdismiss{margin-top:22px;font-size:11px;color:#555;letter-spacing:.15em;cursor:pointer;padding:10px 24px;}
+@keyframes jp{from{transform:scale(1)}to{transform:scale(1.05)}}
+.ju{font-family:'Bebas Neue',sans-serif;font-size:50px;color:#fff;letter-spacing:.15em;margin-top:8px;text-shadow:0 0 30px rgba(255,255,255,.4);}
+.jd{margin-top:22px;font-size:11px;color:#555;letter-spacing:.15em;cursor:pointer;padding:10px 24px;}
 
 /* coins */
-.coin{position:fixed;font-size:22px;pointer-events:none;z-index:8100;animation:cdrop var(--d) linear forwards;}
-@keyframes cdrop{0%{transform:translateY(-80px) rotate(0deg);opacity:1}100%{transform:translateY(110vh) rotate(var(--r));opacity:0}}
+.coin{position:fixed;font-size:22px;pointer-events:none;z-index:8100;animation:cd var(--d) linear forwards;}
+@keyframes cd{0%{transform:translateY(-80px) rotate(0deg);opacity:1}100%{transform:translateY(110vh) rotate(var(--r));opacity:0}}
+
+/* debug panel */
+#dbg{
+  position:fixed;bottom:8px;right:8px;
+  background:rgba(0,0,0,.8);border:1px solid #222;border-radius:4px;
+  padding:6px 10px;font-family:'Share Tech Mono',monospace;font-size:10px;
+  color:#444;max-width:320px;max-height:120px;overflow:auto;z-index:500;
+  display:none; /* показати для дебагу */
+}
 </style>
 </head>
 <body>
-<div class="bg"></div>
-<div class="scan"></div>
 
-<!-- JACKPOT OVERLAY -->
 <div id="jkov" onclick="closeJK()">
-  <span class="jkicon">🎰</span>
-  <div class="jktitle">JACKPOT</div>
-  <div class="jkuser" id="jkuser"></div>
-  <div class="jkdismiss">[ натисніть щоб закрити ]</div>
+  <span class="ji">🎰</span>
+  <div class="jt">JACKPOT</div>
+  <div class="ju" id="jku"></div>
+  <div class="jd">[ натисніть щоб закрити ]</div>
 </div>
+
+<div id="dbg"></div>
 
 <div class="app">
 
   <!-- MARQUEE -->
-  <div class="mq-wrap"><div class="mq-inner">
-    <span>★</span> !spin — крутити барабан
-    <span>★</span> !spin [ставка] — своя ставка
-    <span>★</span> !balance — перевірити баланс
-    <span>★</span> 7️⃣7️⃣7️⃣ = JACKPOT x100
-    <span>★</span> !spin — крутити барабан
-    <span>★</span> !spin [ставка] — своя ставка
-    <span>★</span> !balance — перевірити баланс
-    <span>★</span> 7️⃣7️⃣7️⃣ = JACKPOT x100
+  <div class="mq"><div class="mqi">
+    <s>★</s> !spin — крутити
+    <s>★</s> !spin [ставка] — своя ставка (напр. !spin 50)
+    <s>★</s> !balance — перевірити баланс
+    <s>★</s> 7️⃣7️⃣7️⃣ = JACKPOT x100
+    <s>★</s> !spin — крутити
+    <s>★</s> !spin [ставка] — своя ставка
+    <s>★</s> !balance — перевірити баланс
+    <s>★</s> 7️⃣7️⃣7️⃣ = JACKPOT x100
   </div></div>
 
-  <!-- TITLE BAR -->
-  <div class="title-bar">
+  <!-- TITLE -->
+  <div class="titlebar">
     <div>
-      <div class="title-main">STREAM <em>SLOTS</em></div>
+      <div class="title">STREAM <em>SLOTS</em></div>
       <div class="title-sub">POWERED BY STREAMER.BOT</div>
     </div>
-    <div class="conn-col">
-      <div class="conn-row">
-        <div id="cdot" class="cx"></div>
-        <span id="clabel">Підключення...</span>
-      </div>
-      <div class="conn-addr">ws://127.0.0.1:8080</div>
+    <div class="cbadge">
+      <div class="crow"><div id="dot" class="cx"></div><span id="clbl">Підключення...</span></div>
+      <div class="caddr" id="caddr">ws://127.0.0.1:8080</div>
     </div>
   </div>
 
   <!-- MACHINE -->
   <div class="machine">
-    <div class="wb" id="wb">✨ ВИГРАШ! ✨</div>
+    <div class="wb" id="wb">✨ ВИГРАШ ✨</div>
 
-    <!-- REELS FRAME -->
-    <div class="reels-frame">
-      <div class="payline"></div>
+    <!-- REELS -->
+    <div class="rf">
+      <div class="pl"></div>
       <div class="rc" id="rc0"><div class="rs" id="rs0"></div></div>
       <div class="rc" id="rc1"><div class="rs" id="rs1"></div></div>
       <div class="rc" id="rc2"><div class="rs" id="rs2"></div></div>
     </div>
 
     <!-- STATS -->
-    <div class="stats-bar">
-      <div class="sc"><div class="lbl">Спіни</div><div class="val" id="ss">0</div></div>
-      <div class="sc"><div class="lbl">Виграші</div><div class="val g" id="sw">0</div></div>
-      <div class="sc"><div class="lbl">Jackpots</div><div class="val o" id="sj">0</div></div>
+    <div class="stats">
+      <div class="sc"><div class="l">Спіни</div><div class="v" id="ss">0</div></div>
+      <div class="sc"><div class="l">Виграші</div><div class="v g" id="sw">0</div></div>
+      <div class="sc"><div class="l">Jackpots</div><div class="v o" id="sj">0</div></div>
     </div>
 
     <!-- PRICE -->
-    <div class="price-row">
-      Базова ціна: <div class="chip" id="cPrice">1 pt</div>
-      &nbsp;·&nbsp; Мін: <div class="chip" id="cMin">1</div>
-      &nbsp;·&nbsp; Макс: <div class="chip" id="cMax">100</div>
+    <div class="pr">
+      Ціна: <div class="chip" id="cp">1pt</div>
+      Мін: <div class="chip" id="cmn">1</div>
+      Макс: <div class="chip" id="cmx">100</div>
     </div>
 
     <!-- SPIN ROW -->
-    <div class="spin-row">
-      <div class="side-panel">
-        <div class="sp-cell"><div class="lbl">Гравець</div><div class="val" id="spUser" style="font-size:13px;color:var(--text)">—</div></div>
-        <div class="sp-cell"><div class="lbl">Ставка</div><div class="val" id="spBet">—</div></div>
+    <div class="sr">
+      <div class="sp">
+        <div class="spc"><div class="l">Гравець</div><div class="v" id="pUser" style="font-size:13px;color:var(--text)">—</div></div>
+        <div class="spc"><div class="l">Ставка</div><div class="v" id="pBet">—</div></div>
       </div>
 
-      <button class="spin-btn" id="spinBtn" onclick="localSpin()">SPIN</button>
+      <button class="sb" id="spinBtn" onclick="localSpin()">SPIN</button>
 
-      <div class="side-panel">
-        <div class="sp-cell"><div class="lbl">Баланс</div><div class="val" id="spBal" style="color:var(--green)">1000</div></div>
-        <div class="sp-cell"><div class="lbl">Виграш</div><div class="val" id="spWin" style="color:var(--neon)">—</div></div>
+      <div class="sp">
+        <div class="spc"><div class="l">Баланс</div><div class="v" id="pBal" style="color:var(--green)">1000</div></div>
+        <div class="spc"><div class="l">Виграш</div><div class="v" id="pWin" style="color:var(--neon)">—</div></div>
       </div>
     </div>
   </div><!-- /machine -->
 
-  <!-- PAYTABLE -->
-  <div class="paytable" id="paytable"></div>
-
-  <!-- LOG -->
-  <div class="log-strip"><span id="logtext">🎰 Ініціалізація...</span></div>
+  <div class="pt" id="paytable"></div>
+  <div class="log"><span id="lt">Ініціалізація...</span></div>
 </div>
 
 <script>
-/* ══════════════════════════════════
+/* ══════════════════════════════════════════════
    CONFIG
-══════════════════════════════════ */
+══════════════════════════════════════════════ */
 const CFG = {
   host:       '127.0.0.1',
   port:       8080,
@@ -363,9 +394,9 @@ const CFG = {
   reconnMs:   3000,
 };
 
-/* ══════════════════════════════════
+/* ══════════════════════════════════════════════
    SYMBOLS & PAYTABLE
-══════════════════════════════════ */
+══════════════════════════════════════════════ */
 const SYMS    = ['🍒','🍋','🍊','🍇','🔔','⭐','💎','7️⃣'];
 const WEIGHTS = [ 30,  24,  18,  12,   8,   5,   2,   1];
 const WTOTAL  = WEIGHTS.reduce((a,b)=>a+b,0);
@@ -381,42 +412,40 @@ const PAY = {
   '7️⃣7️⃣7️⃣':{name:'JACKPOT 777',  mult:100, jackpot:true},
 };
 
-/* ══════════════════════════════════
+/* ══════════════════════════════════════════════
    STATE
-══════════════════════════════════ */
-let spinning = false;
-let ws = null, wsOk = false, reconn = null;
-const st = {spins:0, wins:0, jk:0};
-const bals = {};
+══════════════════════════════════════════════ */
+let spinning=false, ws=null, wsOk=false, reconn=null;
+const ST={spins:0,wins:0,jk:0};
+const bals={};
+function getBal(u){return bals[u]??CFG.startBal;}
+function setBal(u,v){bals[u]=Math.max(0,Math.round(v));}
 
-function getBal(u){ return bals[u] ?? CFG.startBal; }
-function setBal(u,v){ bals[u] = Math.max(0, Math.round(v)); }
-
-/* ══════════════════════════════════
-   REEL INIT  — 32 cells, centre = index 10
-══════════════════════════════════ */
-const TOTAL_CELLS = 32;
-const SYM_H = 110;       // px — must match CSS --symH
-const CENTRE = 10;       // which cell index sits at payline
+/* ══════════════════════════════════════════════
+   REEL INIT
+══════════════════════════════════════════════ */
+const CELLS=34, SH=116, CENTRE=11;
+// visible window = 360px → centre at 180px
+// cell centre at idx: idx*SH + SH/2
+// translateY so that = 180 → Y = 180 - (idx*SH + SH/2)
 
 function initReels(){
   for(let r=0;r<3;r++){
-    const rs = document.getElementById(`rs${r}`);
+    const rs=document.getElementById(`rs${r}`);
     rs.innerHTML='';
-    for(let i=0;i<TOTAL_CELLS;i++){
+    for(let i=0;i<CELLS;i++){
       const d=document.createElement('div');
-      d.className='sym'; d.id=`s${r}_${i}`;
-      d.textContent=rndSym(); rs.appendChild(d);
+      d.className='sym';d.id=`s${r}i${i}`;
+      d.textContent=rndSym();rs.appendChild(d);
     }
-    snapTo(r, CENTRE);
+    snap(r,CENTRE);
   }
 }
 
-/* position reel so cell[idx] is at payline centre (165px from top of 330px window) */
-function snapTo(r, idx){
+function snap(r,idx){
   const rs=document.getElementById(`rs${r}`);
   rs.style.transition='none';
-  rs.style.transform=`translateY(${165-(idx*SYM_H+SYM_H/2)}px)`;
+  rs.style.transform=`translateY(${180-(idx*SH+SH/2)}px)`;
 }
 
 function rndSym(){
@@ -425,291 +454,358 @@ function rndSym(){
   return SYMS[0];
 }
 
-/* ══════════════════════════════════
-   SPIN — VISIBLE ROLL ANIMATION
-══════════════════════════════════ */
-function doSpin(user, bet){
-  if(spinning) return;
+/* ══════════════════════════════════════════════
+   SPIN
+══════════════════════════════════════════════ */
+function doSpin(user,bet){
+  if(spinning)return;
   spinning=true;
   document.getElementById('spinBtn').disabled=true;
 
-  bet=Math.min(CFG.maxBet, Math.max(CFG.minBet, bet||CFG.basePrice));
+  bet=Math.min(CFG.maxBet,Math.max(CFG.minBet,parseInt(bet)||CFG.basePrice));
 
   const bal=getBal(user);
   if(bal<bet){
     log(`❌ ${user}: недостатньо балансу (${bal}pt)`);
-    spinning=false; document.getElementById('spinBtn').disabled=false;
+    spinning=false;document.getElementById('spinBtn').disabled=false;
     return;
   }
-  setBal(user, bal-bet);
-  st.spins++;
-  updStats();
+  setBal(user,bal-bet);
+  ST.spins++;updST();
 
-  document.getElementById('spUser').textContent=user.slice(0,12);
-  document.getElementById('spBet').textContent=`${bet}pt`;
-  document.getElementById('spBal').textContent=getBal(user);
-  log(`🎰 ${user} ставить ${bet}pt...`);
+  document.getElementById('pUser').textContent=user.slice(0,14);
+  document.getElementById('pBet').textContent=`${bet}pt`;
+  document.getElementById('pBal').textContent=getBal(user);
+  log(`🎰 ${user} · ставка ${bet}pt · крутимо...`);
 
-  const results=[rndSym(),rndSym(),rndSym()];
-  const stagger=[0,340,680];
-  const proms=results.map((sym,r)=>new Promise(res=>setTimeout(()=>rollReel(r,sym,res),stagger[r])));
-
+  const res=[rndSym(),rndSym(),rndSym()];
+  const stagger=[0,320,640];
+  const proms=res.map((sym,r)=>new Promise(ok=>setTimeout(()=>rollReel(r,sym,ok),stagger[r])));
   Promise.all(proms).then(()=>{
     spinning=false;
     document.getElementById('spinBtn').disabled=false;
-    checkWin(results,user,bet);
+    checkWin(res,user,bet);
   });
 }
 
-function rollReel(r, finalSym, done){
+function rollReel(r,finalSym,done){
   const rs=document.getElementById(`rs${r}`);
-  const cells=rs.querySelectorAll('.sym');
-  const duration=800+r*220; // ms
+  const cells=[...rs.querySelectorAll('.sym')];
+  const dur=850+r*230;
 
-  /* fill strip: random symbols, put finalSym at CENTRE */
-  cells.forEach((c,i)=>c.textContent = i===CENTRE ? finalSym : rndSym());
+  // fill strip randomly, put final at CENTRE
+  cells.forEach((c,i)=>c.textContent=(i===CENTRE)?finalSym:rndSym());
 
-  /* START: push strip UP so it appears to scroll DOWN into place
-     We start from CENTRE-4 (4 rows above final) */
-  const startIdx=CENTRE-5;
-  const endIdx=CENTRE;
-  const startY=165-(startIdx*SYM_H+SYM_H/2);
-  const endY  =165-(endIdx  *SYM_H+SYM_H/2);
+  // Start 5 cells above centre, animate down to centre
+  const fromIdx=CENTRE-5;
+  const toIdx=CENTRE;
+  const fromY=180-(fromIdx*SH+SH/2);
+  const toY  =180-(toIdx  *SH+SH/2);
 
   rs.style.transition='none';
-  rs.style.transform=`translateY(${startY}px)`;
-  rs.getBoundingClientRect(); // force reflow
+  rs.style.transform=`translateY(${fromY}px)`;
+  rs.getBoundingClientRect(); // reflow
 
-  /* blur during spin */
-  rs.style.filter='blur(4px)';
-  setTimeout(()=>{ rs.style.filter='blur(0)'; }, duration-90);
+  rs.style.filter='blur(5px)';
+  setTimeout(()=>rs.style.filter='blur(0px)',dur-80);
 
-  /* animate */
-  rs.style.transition=`transform ${duration}ms cubic-bezier(0.22,0.61,0.36,1)`;
-  rs.style.transform=`translateY(${endY}px)`;
+  rs.style.transition=`transform ${dur}ms cubic-bezier(0.18,0.58,0.36,1)`;
+  rs.style.transform=`translateY(${toY}px)`;
 
-  setTimeout(done, duration+40);
+  setTimeout(done,dur+50);
 }
 
-/* ══════════════════════════════════
+/* ══════════════════════════════════════════════
    CHECK WIN
-══════════════════════════════════ */
-function checkWin(res, user, bet){
+══════════════════════════════════════════════ */
+function checkWin(res,user,bet){
   const key=res.join('');
   const w=PAY[key];
-
   if(w){
-    st.wins++; if(w.jackpot)st.jk++;
-    updStats();
+    ST.wins++;if(w.jackpot)ST.jk++;updST();
     const prize=bet*w.mult;
-    setBal(user, getBal(user)+prize);
-    document.getElementById('spBal').textContent=getBal(user);
-    document.getElementById('spWin').textContent=`+${prize}pt`;
+    setBal(user,getBal(user)+prize);
+    document.getElementById('pBal').textContent=getBal(user);
+    document.getElementById('pWin').textContent=`+${prize}pt`;
 
     for(let r=0;r<3;r++){
       const rc=document.getElementById(`rc${r}`);
       rc.classList.add('wg');
-      setTimeout(()=>rc.classList.remove('wg'),1500);
+      setTimeout(()=>rc.classList.remove('wg'),1800);
     }
-
     const wb=document.getElementById('wb');
     wb.textContent=w.jackpot?`🏆 JACKPOT! x${w.mult}`:`✨ ${w.name}! x${w.mult} (+${prize}pt)`;
-    wb.classList.add('show');
-    setTimeout(()=>wb.classList.remove('show'),4500);
+    wb.classList.add('show');setTimeout(()=>wb.classList.remove('show'),4500);
 
-    log(`🏆 ${user}: ${res.join(' ')} → ${w.name} x${w.mult} = +${prize}pt!`);
+    log(`🏆 ${user}: ${res.join(' ')} → ${w.name} x${w.mult} = +${prize}pt`);
     sbSend({event:'slot_win',user,result:res.join(' '),mult:w.mult,prize,jackpot:!!w.jackpot,balance:getBal(user)});
-
-    if(w.jackpot) trigJK(user);
+    if(w.jackpot)trigJK(user);
   } else {
-    document.getElementById('spWin').textContent='—';
+    document.getElementById('pWin').textContent='—';
     log(`💀 ${user}: ${res.join(' ')} — немає виграшу`);
     sbSend({event:'slot_loss',user,result:res.join(' '),balance:getBal(user)});
   }
-  sbSend({event:'slot_spin_done',user,result:res.join(' '),win:!!w,balance:getBal(user)});
 }
 
-function updStats(){
-  document.getElementById('ss').textContent=st.spins;
-  document.getElementById('sw').textContent=st.wins;
-  document.getElementById('sj').textContent=st.jk;
+function updST(){
+  document.getElementById('ss').textContent=ST.spins;
+  document.getElementById('sw').textContent=ST.wins;
+  document.getElementById('sj').textContent=ST.jk;
 }
 
-/* ══════════════════════════════════
+/* ══════════════════════════════════════════════
    JACKPOT
-══════════════════════════════════ */
+══════════════════════════════════════════════ */
 function trigJK(user){
-  document.getElementById('jkuser').textContent=user;
+  document.getElementById('jku').textContent=user;
   document.getElementById('jkov').classList.add('show');
-  for(let i=0;i<55;i++) setTimeout(spawnCoin, i*65);
-  setTimeout(closeJK,13000);
+  for(let i=0;i<55;i++)setTimeout(spawnCoin,i*65);
+  setTimeout(closeJK,12000);
 }
-function closeJK(){ document.getElementById('jkov').classList.remove('show'); }
+function closeJK(){document.getElementById('jkov').classList.remove('show');}
 function spawnCoin(){
-  const c=document.createElement('div'); c.className='coin';
-  c.textContent=['🪙','💰','⭐','💎','🔔'][Math.floor(Math.random()*5)];
+  const c=document.createElement('div');c.className='coin';
+  c.textContent=['🪙','💰','⭐','💎','🔔'][~~(Math.random()*5)];
   c.style.left=Math.random()*100+'vw';
   c.style.setProperty('--d',(1.4+Math.random()*2.4)+'s');
-  c.style.setProperty('--r',(360+Math.random()*720)+'deg');
-  document.body.appendChild(c);
-  setTimeout(()=>c.remove(),5000);
+  c.style.setProperty('--r',(400+Math.random()*720)+'deg');
+  document.body.appendChild(c);setTimeout(()=>c.remove(),5000);
 }
 
-/* ══════════════════════════════════
-   LOG STRIP
-══════════════════════════════════ */
-const logQ=[]; let logBusy=false;
-function log(msg){
-  logQ.push(msg);
-  if(!logBusy) nextLog();
-}
+/* ══════════════════════════════════════════════
+   LOG
+══════════════════════════════════════════════ */
+const lq=[];let lb=false;
+function log(m){lq.push(m);if(!lb)nextLog();}
 function nextLog(){
-  if(!logQ.length){logBusy=false;return;}
-  logBusy=true;
-  const el=document.getElementById('logtext');
+  if(!lq.length){lb=false;return;}lb=true;
+  const el=document.getElementById('lt');
   el.style.opacity='0';
-  setTimeout(()=>{el.textContent=logQ.shift();el.style.opacity='1';setTimeout(nextLog,3200);},200);
+  setTimeout(()=>{el.textContent=lq.shift();el.style.opacity='1';setTimeout(nextLog,3200);},200);
 }
 
-/* ══════════════════════════════════
-   STREAMER.BOT WEBSOCKET — AUTO-CONNECT + AUTO-RECONNECT
-══════════════════════════════════ */
+/* ══════════════════════════════════════════════
+   DEBUG
+══════════════════════════════════════════════ */
+function dbg(msg){
+  const d=document.getElementById('dbg');
+  if(!d)return;
+  const line=document.createElement('div');
+  line.textContent=`[${new Date().toLocaleTimeString()}] ${msg}`;
+  d.appendChild(line);
+  while(d.children.length>20)d.removeChild(d.firstChild);
+  d.scrollTop=d.scrollHeight;
+}
+
+/* ══════════════════════════════════════════════
+   STREAMER.BOT WEBSOCKET
+
+   Streamer.bot WebSocket API v0.1.4 event format:
+   {
+     "timeStamp": "2024-...",
+     "event": {
+       "source": "Twitch",
+       "type": "ChatMessage"
+     },
+     "data": {
+       "message": {
+         "msgId": "...",
+         "userId": "...",
+         "username": "username",
+         "display": "DisplayName",
+         "message": "!spin 50",
+         ...
+       },
+       "user": { ... }   ← іноді теж є
+     }
+   }
+══════════════════════════════════════════════ */
 function connect(){
-  if(ws){ try{ws.close();}catch(_){} }
-  setUI('cx','Підключення...');
+  if(ws){try{ws.close();}catch(_){}}
+  setDot('cx','Підключення...');
 
   ws=new WebSocket(`ws://${CFG.host}:${CFG.port}/`);
 
   ws.onopen=()=>{
-    wsOk=true; clearTimeout(reconn);
-    setUI('on','Підключено ✓');
+    wsOk=true;clearTimeout(reconn);
+    setDot('on','Підключено ✓');
     log('⚡ Streamer.bot підключено!');
-    // subscribe to chat + custom events
+    dbg('WS OPEN — subscribing...');
+
+    // ── Subscribe to events ──
+    // Streamer.bot WS API: request "Subscribe"
     ws.send(JSON.stringify({
-      request:'Subscribe', id:'slots-1',
-      events:{ Twitch:['ChatMessage'], General:['Custom'] }
+      request: 'Subscribe',
+      id: 'slots-sub',
+      events: {
+        'Twitch': ['ChatMessage'],
+        'General': ['Custom']
+      }
     }));
   };
 
-  ws.onmessage=e=>{ try{handleSB(JSON.parse(e.data));}catch(_){} };
+  ws.onmessage=e=>{
+    dbg('MSG: '+e.data.slice(0,120));
+    try{
+      const raw=JSON.parse(e.data);
+      handleMsg(raw);
+    }catch(err){
+      dbg('PARSE ERR: '+err);
+    }
+  };
 
-  ws.onerror=()=>setUI('err','Помилка з\'єднання');
+  ws.onerror=err=>{
+    setDot('err','Помилка');
+    dbg('WS ERROR');
+  };
 
   ws.onclose=()=>{
     wsOk=false;
-    setUI('','Відключено — повтор...');
-    log('🔌 З\'єднання закрито, перепідключення...');
-    reconn=setTimeout(connect, CFG.reconnMs);
+    setDot('','Відключено — повтор...');
+    log('🔌 Відключено, перепідключення через 3с...');
+    dbg('WS CLOSED — reconnecting...');
+    reconn=setTimeout(connect,CFG.reconnMs);
   };
 }
 
-function setUI(cls, label){
-  const d=document.getElementById('cdot');
-  d.className=cls;
-  document.getElementById('clabel').textContent=label;
+function setDot(cls,lbl){
+  document.getElementById('dot').className=cls;
+  document.getElementById('clbl').textContent=lbl;
 }
 
-/* ══════════════════════════════════
-   HANDLE STREAMER.BOT EVENTS
-══════════════════════════════════ */
-function handleSB(data){
-  const type=data?.event?.type;
-  const ev=data?.data;
-
-  /* Chat message */
-  if(type==='ChatMessage'){
-    const msg=(ev?.message||ev?.rawInput||'').trim();
-    const user=ev?.display_name||ev?.username||'viewer';
-    parseCmd(msg, user);
+/* ══════════════════════════════════════════════
+   HANDLE ALL INCOMING MESSAGES
+   Streamer.bot може надсилати різні формати —
+   обробляємо всі варіанти
+══════════════════════════════════════════════ */
+function handleMsg(d){
+  // ── Відповідь на Subscribe ──
+  if(d.status==='ok'||d.id==='slots-sub'){
+    dbg('Subscribed OK');
     return;
   }
 
-  /* Custom event / DoAction payload */
-  if(type==='Custom'||data?.source==='Slots'){
-    const cmd=ev?.command||data?.command||'';
-    const user=ev?.user||data?.user||'viewer';
-    const arg=parseInt(ev?.arg||data?.arg||'0')||CFG.basePrice;
-    if(cmd==='spin')    doSpin(user,arg);
-    if(cmd==='balance') showBalance(user);
-    if(cmd==='reset')   resetAll();
+  const evSrc  = d?.event?.source || '';
+  const evType = d?.event?.type   || '';
+  const data   = d?.data          || {};
+
+  dbg(`EVT: ${evSrc}/${evType}`);
+
+  // ══ TWITCH CHAT MESSAGE ══
+  if(evType==='ChatMessage'){
+    // Streamer.bot формат: data.message.message
+    // або data.message (рядок)
+    let msg='', user='viewer';
+
+    if(typeof data.message === 'object' && data.message !== null){
+      msg  = data.message.message || '';
+      user = data.message.display || data.message.username || 'viewer';
+    } else if(typeof data.message === 'string'){
+      msg  = data.message;
+      user = data.username || data.display || 'viewer';
+    }
+
+    // також перевіряємо data.user
+    if(!user||user==='viewer'){
+      user = data?.user?.display || data?.user?.username || 'viewer';
+    }
+
+    dbg(`CHAT [${user}]: ${msg}`);
+    parseCmd(msg.trim(), user);
     return;
   }
 
-  /* Direct object format */
-  if(data?.command){
-    const user=data.user||'viewer';
-    const arg=parseInt(data.arg||'0')||CFG.basePrice;
-    if(data.command==='spin')    doSpin(user,arg);
-    if(data.command==='balance') showBalance(user);
-    if(data.command==='reset')   resetAll();
+  // ══ GENERAL CUSTOM EVENT (від SB Action) ══
+  if(evType==='Custom'||evSrc==='Slots'){
+    const cmd  = data?.command || '';
+    const user = data?.user    || 'viewer';
+    const arg  = data?.arg     || '1';
+    dbg(`CUSTOM cmd=${cmd} user=${user} arg=${arg}`);
+    routeCmd(cmd,user,arg);
+    return;
+  }
+
+  // ══ DIRECT FORMAT (від якогось HTTP→WS proxy) ══
+  if(d.command){
+    routeCmd(d.command, d.user||'viewer', d.arg||'1');
+    return;
   }
 }
 
-/* ── Parse raw chat command ── */
 function parseCmd(msg, user){
-  const lo=msg.toLowerCase().trim();
+  if(!msg) return;
+  const lo=msg.toLowerCase();
   if(lo.startsWith('!spin')){
-    const parts=msg.split(/\s+/);
+    const parts=msg.trim().split(/\s+/);
     const bet=parseInt(parts[1])||CFG.basePrice;
     doSpin(user,bet);
   } else if(lo==='!balance'){
-    showBalance(user);
+    showBal(user);
   }
 }
 
-function showBalance(user){
+function routeCmd(cmd,user,arg){
+  if(cmd==='spin')    doSpin(user,parseInt(arg)||CFG.basePrice);
+  if(cmd==='balance') showBal(user);
+  if(cmd==='jackpot') trigJK(user);
+  if(cmd==='reset')   resetAll();
+}
+
+function showBal(user){
   const b=getBal(user);
   log(`💰 ${user}: баланс = ${b}pt`);
   sbSend({event:'balance_check',user,balance:b});
 }
 
 function sbSend(payload){
-  if(!wsOk||!ws||ws.readyState!==1) return;
-  try{ ws.send(JSON.stringify({request:'DoAction',action:{name:'SlotEvent'},args:payload})); }
-  catch(_){}
+  if(!wsOk||!ws||ws.readyState!==1)return;
+  try{ws.send(JSON.stringify({
+    request:'DoAction',
+    action:{name:'SlotEvent'},
+    args:payload
+  }));}catch(_){}
 }
 
-/* ══════════════════════════════════
-   LOCAL (manual) SPIN + KEYBOARD
-══════════════════════════════════ */
-function localSpin(){ doSpin('Стрімер', CFG.basePrice); }
-
-function resetAll(){
-  st.spins=0;st.wins=0;st.jk=0;updStats();
-  log('🔄 Статистику скинуто');
-}
+/* ══════════════════════════════════════════════
+   LOCAL SPIN (кнопка / пробіл)
+══════════════════════════════════════════════ */
+function localSpin(){doSpin('Стрімер',CFG.basePrice);}
+function resetAll(){ST.spins=0;ST.wins=0;ST.jk=0;updST();log('🔄 Скинуто');}
 
 document.addEventListener('keydown',e=>{
   if(e.code==='Space'&&!spinning){e.preventDefault();localSpin();}
+  // Ctrl+D = показати debug панель
+  if(e.code==='KeyD'&&e.ctrlKey){
+    const d=document.getElementById('dbg');
+    d.style.display=d.style.display==='none'?'block':'none';
+  }
 });
 
-/* ══════════════════════════════════
+/* ══════════════════════════════════════════════
    PAYTABLE
-══════════════════════════════════ */
+══════════════════════════════════════════════ */
 function buildPT(){
   const pt=document.getElementById('paytable');
-  pt.innerHTML='';
   Object.entries(PAY).forEach(([combo,info])=>{
-    const d=document.createElement('div'); d.className='pe';
+    const d=document.createElement('div');d.className='pe';
     d.innerHTML=`<span class="es">${combo}</span><span class="em">x${info.mult}</span>`;
     pt.appendChild(d);
   });
 }
 
-/* ══════════════════════════════════
-   INIT
-══════════════════════════════════ */
-function init(){
-  document.getElementById('cPrice').textContent=`${CFG.basePrice}pt`;
-  document.getElementById('cMin').textContent=CFG.minBet;
-  document.getElementById('cMax').textContent=CFG.maxBet;
+/* ══════════════════════════════════════════════
+   BOOT
+══════════════════════════════════════════════ */
+(function init(){
+  document.getElementById('cp').textContent=`${CFG.basePrice}pt`;
+  document.getElementById('cmn').textContent=CFG.minBet;
+  document.getElementById('cmx').textContent=CFG.maxBet;
+  document.getElementById('caddr').textContent=`ws://${CFG.host}:${CFG.port}`;
   initReels();
   buildPT();
   connect();
-  log('🎰 Stream Slots готовий!  !spin · !spin [ставка] · !balance');
-}
-
-init();
+  log('🎰 Stream Slots готовий!  Команди: !spin · !spin [ставка] · !balance');
+})();
 </script>
 </body>
 </html>
