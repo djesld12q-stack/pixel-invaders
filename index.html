@@ -329,13 +329,40 @@ function connectSB() {
     ws.onmessage = (e) => {
       try {
         const d = JSON.parse(e.data);
-        if (d.event && d.event.type === 'ChatMessage') {
-          const msg  = d.data?.message || d.data?.rawInput || '';
-          const user = d.data?.displayName || d.data?.username || 'anon';
-          if (msg.startsWith('!')) handleChatCommand(user, msg);
-          else addChatLine(user, msg, false);
+
+        // Log raw for debug (перші 200 символів)
+        addLog('RAW: '+e.data.slice(0,200), 'inf');
+
+        // Streamer.bot v0.1.x — event wrapper
+        const evType = d?.event?.type || d?.event?.source || '';
+        const isChat = evType === 'ChatMessage'
+          || d?.event?.type === 'Message'
+          || d?.data?.message !== undefined
+          || d?.data?.rawInput !== undefined
+          || d?.message !== undefined;
+
+        if (isChat) {
+          // Пробуємо всі можливі шляхи до тексту повідомлення
+          const msg = d?.data?.message?.message
+            || d?.data?.message
+            || d?.data?.rawInput
+            || d?.message
+            || d?.data?.command
+            || '';
+
+          // Пробуємо всі можливі шляхи до імені
+          const user = d?.data?.message?.displayName
+            || d?.data?.displayName
+            || d?.data?.username
+            || d?.data?.message?.username
+            || d?.user
+            || 'viewer';
+
+          const txt = String(msg).trim();
+          if (txt.startsWith('!')) handleChatCommand(user, txt);
+          else if (txt) addChatLine(user, txt, false);
         }
-      } catch(ex) {}
+      } catch(ex) { addLog('Parse err: '+ex.message,'err'); }
     };
   } catch(ex) {
     setSBStatus(false,'Error'); addLog('Не вдалось: '+ex.message,'err');
