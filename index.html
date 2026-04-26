@@ -387,10 +387,10 @@ body::after{
 const CFG = {
   host:       '127.0.0.1',
   port:       8080,
-  basePrice:  1,
-  minBet:     1,
-  maxBet:     100,
-  startBal:   1000,
+  basePrice:  10,
+  minBet:     10,
+  maxBet:     10000,
+  startBal:   10000,
   reconnMs:   3000,
 };
 
@@ -459,14 +459,24 @@ function rndSym(){
 ══════════════════════════════════════════════ */
 function doSpin(user,bet){
   if(spinning)return;
+
+  const rawBet=parseInt(bet)||CFG.basePrice;
+  // Якщо ставка більша за максимум — повідомити в чат
+  if(rawBet>CFG.maxBet){
+    log(`❌ ${user}: ставка ${rawBet} перевищує максимум ${CFG.maxBet}pt`);
+    sbChat(`@${user} ❌ Максимальна ставка: ${CFG.maxBet.toLocaleString()} pt | Твій баланс: ${getBal(user).toLocaleString()} pt`);
+    return;
+  }
+
   spinning=true;
   document.getElementById('spinBtn').disabled=true;
 
-  bet=Math.min(CFG.maxBet,Math.max(CFG.minBet,parseInt(bet)||CFG.basePrice));
+  bet=Math.max(CFG.minBet,rawBet);
 
   const bal=getBal(user);
   if(bal<bet){
     log(`❌ ${user}: недостатньо балансу (${bal}pt)`);
+    sbChat(`@${user} ❌ Недостатньо балансу! У тебе: ${bal} pt`);
     spinning=false;document.getElementById('spinBtn').disabled=false;
     return;
   }
@@ -538,11 +548,17 @@ function checkWin(res,user,bet){
     wb.classList.add('show');setTimeout(()=>wb.classList.remove('show'),4500);
 
     log(`🏆 ${user}: ${res.join(' ')} → ${w.name} x${w.mult} = +${prize}pt`);
+    if(w.jackpot){
+      sbChat(`🏆 JACKPOT! @${user} зірвав джекпот ${res.join(' ')} x${w.mult} = +${prize}pt! Баланс: ${getBal(user)}pt`);
+    } else {
+      sbChat(`🎰 @${user} виграв! ${res.join(' ')} → ${w.name} x${w.mult} = +${prize}pt | Баланс: ${getBal(user)}pt`);
+    }
     sbSend({event:'slot_win',user,result:res.join(' '),mult:w.mult,prize,jackpot:!!w.jackpot,balance:getBal(user)});
     if(w.jackpot)trigJK(user);
   } else {
     document.getElementById('pWin').textContent='—';
     log(`💀 ${user}: ${res.join(' ')} — немає виграшу`);
+    sbChat(`💀 @${user} не пощастило ${res.join(' ')} | Баланс: ${getBal(user)}pt`);
     sbSend({event:'slot_loss',user,result:res.join(' '),balance:getBal(user)});
   }
 }
@@ -734,11 +750,14 @@ function handleMsg(d){
 
 function parseCmd(msg, user){
   if(!msg) return;
-  const lo=msg.toLowerCase();
+  const lo=msg.toLowerCase().trim();
   if(lo.startsWith('!spin')){
-    const parts=msg.trim().split(/\s+/);
-    const bet=parseInt(parts[1])||CFG.basePrice;
-    doSpin(user,bet);
+    // Беремо всё після !spin, прибираємо пробіли та незначущі символи
+    // Підтримка: !spin 100  !spin 1000  !spin 10 000  !spin 10,000
+    const rest = msg.trim().slice(5).trim(); // всё після "!spin"
+    const cleaned = rest.replace(/[\s,_.]/g,'');  // "10 000" → "10000"
+    const bet = parseInt(cleaned) || CFG.basePrice;
+    doSpin(user, bet);
   } else if(lo==='!balance'){
     showBal(user);
   }
@@ -754,16 +773,32 @@ function routeCmd(cmd,user,arg){
 function showBal(user){
   const b=getBal(user);
   log(`💰 ${user}: баланс = ${b}pt`);
-  sbSend({event:'balance_check',user,balance:b});
+  sbChat(`@${user} 💰 Твій баланс: ${b} pt`);
+}
+
+/* Надсилає повідомлення в Twitch чат через action "game" в Streamer.bot
+   Sub-Action в SB: Twitch → Send Message → текст: %message%            */
+function sbChat(message){
+  if(!wsOk||!ws||ws.readyState!==1){dbg('sbChat: WS не підключено');return;}
+  try{
+    ws.send(JSON.stringify({
+      request: 'DoAction',
+      action:  { name: 'game' },
+      args:    { event: 'chat_message', message }
+    }));
+    dbg('sbChat → '+message);
+  }catch(e){dbg('sbChat ERR: '+e);}
 }
 
 function sbSend(payload){
   if(!wsOk||!ws||ws.readyState!==1)return;
-  try{ws.send(JSON.stringify({
-    request:'DoAction',
-    action:{name:'SlotEvent'},
-    args:payload
-  }));}catch(_){}
+  try{
+    ws.send(JSON.stringify({
+      request: 'DoAction',
+      action:  { name: 'game' },
+      args:    payload
+    }));
+  }catch(_){}
 }
 
 /* ══════════════════════════════════════════════
